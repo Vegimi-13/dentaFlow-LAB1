@@ -1,6 +1,7 @@
 import * as authService from '../services/auth.service.js'
 
 const register = async (req, res) => {
+  console.log('Register endpoint hit')
   try {
     const { email, password, role } = req.body
     const user = await authService.register(email, password, role)

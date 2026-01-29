@@ -5,9 +5,18 @@ import protect from '../middlewares/auth.middleware.js'
 import allow from '../middlewares/role.middleware.js'
 
 const router = Router()
+// 🔒 all patient routes protected
+router.use(protect)
+
+/**
+ * PATIENT → manage own profile
+ */
+router.post('/me', allow('PATIENT'), patientController.createMyProfile)
+router.get('/me', allow('PATIENT'), patientController.getMyProfile)
+router.put('/me', allow('PATIENT'), patientController.updateMyProfile)
 
 // 🔒 All patient routes require authentication
-router.use(protect)
+// router.use(protect)
 
 // ➕ Create patient (ADMIN, DOCTOR)
 router.post('/', allow('ADMIN', 'DOCTOR'), patientController.createPatient)

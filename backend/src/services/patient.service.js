@@ -55,3 +55,35 @@ export const deletePatient = async (id) => {
     where: { id },
   })
 }
+
+
+/**
+ * PATIENT → create own profile
+ */
+export const createPatientForUser = async (userId, data) => {
+  return prisma.patient.create({
+    data: {
+      ...data,
+      userId,
+    },
+  })
+}
+
+/**
+ * PATIENT → get own profile
+ */
+export const getPatientByUserId = async (userId) => {
+  return prisma.patient.findUnique({
+    where: { userId },
+  })
+}
+
+/**
+ * PATIENT → update own profile
+ */
+export const updatePatientByUserId = async (userId, data) => {
+  return prisma.patient.update({
+    where: { userId },
+    data,
+  })
+}

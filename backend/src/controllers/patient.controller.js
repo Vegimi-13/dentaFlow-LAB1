@@ -67,3 +67,51 @@ export const deletePatient = async (req, res) => {
     res.status(400).json({ error: error.message })
   }
 }
+
+
+/**
+ * PATIENT → create own profile
+ */
+export const createMyProfile = async (req, res) => {
+  try {
+    const userId = req.user.id
+    const patient = await patientService.createPatientForUser(userId, req.body)
+    res.status(201).json(patient)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+/**
+ * PATIENT → get own profile
+ */
+export const getMyProfile = async (req, res) => {
+  try {
+    const userId = req.user.id
+    const patient = await patientService.getPatientByUserId(userId)
+
+    if (!patient) {
+      return res.status(404).json({ error: 'Patient profile not found' })
+    }
+
+    res.json(patient)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
+/**
+ * PATIENT → update own profile
+ */
+export const updateMyProfile = async (req, res) => {
+  try {
+    const userId = req.user.id
+    const patient = await patientService.updatePatientByUserId(
+      userId,
+      req.body
+    )
+    res.json(patient)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
