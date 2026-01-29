@@ -25,6 +25,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   medicalRecords MedicalRecord[]
+  appointments Appointment[]
 }
 
 model Patient {
@@ -38,6 +39,7 @@ model Patient {
   updatedAt DateTime @updatedAt
 
   medicalRecords MedicalRecord[]
+  appointments   Appointment[]
 }
 
 //here is medical records
@@ -57,4 +59,23 @@ model MedicalRecord {
   // relations
   patient     Patient  @relation(fields: [patientId], references: [id])
   doctor      User     @relation(fields: [doctorId], references: [id])
+}
+
+
+model Appointment {
+  id        Int      @id @default(autoincrement())
+
+  date      DateTime
+  status    String   @default("PENDING")
+  notes     String?
+
+  patientId Int
+  doctorId  Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relations
+  patient   Patient @relation(fields: [patientId], references: [id])
+  doctor    User    @relation(fields: [doctorId], references: [id])
 }
