@@ -5,5 +5,5 @@ export const createAppointment = (data) => {
 }
 
 export const getMyAppointments = () => {
-  return api.get("/appointments/me")
+  return api.get("/appointments/patient/me")
 }

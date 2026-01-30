@@ -2,10 +2,18 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import BookAppointmentModal from "../components/BookAppointmentModal";
+import { getMyAppointments } from "../api/appointment";
 
 import { useAuth } from "../contexts/AuthContext";
 import { getMyProfile, updateMyProfile } from "../api/patient";
 import CompleteProfileForm from "../components/CompleteProfileForm";
+const statusStyles = {
+  PENDING: "border border-yellow-400 text-yellow-700 bg-yellow-50",
+  CONFIRMED: "border border-blue-400 text-blue-700 bg-blue-50",
+  COMPLETED: "border border-green-400 text-green-700 bg-green-50",
+  CANCELLED: "border border-red-400 text-red-700 bg-red-50",
+};
 
 export default function PatientDashboard() {
   const { user, logout } = useAuth();
@@ -13,7 +21,25 @@ export default function PatientDashboard() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
+  const [openBooking, setOpenBooking] = useState(false);
+  const [appointments, setAppointments] = useState([]);
+
+  //here
+  const ITEMS_PER_PAGE = 5;
+  const [page, setPage] = useState(1);
+
   const [now, setNow] = useState(new Date());
+  const loadAppointments = () => {
+    getMyAppointments()
+      .then((res) => {
+        console.log("APPOINTMENTS:", res.data);
+        setAppointments(res.data);
+      })
+      .catch(() => setAppointments([]));
+  };
+  useEffect(() => {
+    loadAppointments();
+  }, []);
 
   useEffect(() => {
     getMyProfile()
@@ -26,6 +52,14 @@ export default function PatientDashboard() {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  //ketu
+  const totalPages = Math.ceil(appointments.length / ITEMS_PER_PAGE);
+
+  const paginatedAppointments = appointments.slice(
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE,
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -102,10 +136,74 @@ export default function PatientDashboard() {
               </TabsList>
 
               {/* Appointments */}
-              <TabsContent value="appointments" className="pt-6">
-                <p className="text-slate-500">
-                  Your appointments will appear here.
-                </p>
+              <TabsContent value="appointments" className="pt-6 space-y-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-slate-500">Manage your appointments</p>
+
+                  <Button onClick={() => setOpenBooking(true)}>
+                    Book new appointment
+                  </Button>
+                </div>
+
+                {/* appointments list will go here */}
+                {appointments.length === 0 && (
+                  <p className="text-slate-500">No appointments yet.</p>
+                )}
+
+                <div className="space-y-3">
+                  {paginatedAppointments.map((appt) => (
+                    <div
+                      key={appt.id}
+                      className="border rounded-md p-4 flex justify-between items-center"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {new Date(appt.date).toLocaleDateString()} •{" "}
+                          {new Date(appt.date).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+
+                        <p className="text-sm text-slate-500">
+                          Doctor: {appt.doctor.email}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`text-sm px-2 py-1 rounded capitalize font-medium ${
+                          statusStyles[appt.status] ||
+                          "border border-slate-300 text-slate-600"
+                        }`}
+                      >
+                        {appt.status}
+                      </span>
+                    </div>
+                  ))}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-4">
+                      <Button
+                        variant="outline"
+                        disabled={page === 1}
+                        onClick={() => setPage((p) => p - 1)}
+                      >
+                        Previous
+                      </Button>
+
+                      <span className="text-sm text-slate-500">
+                        Page {page} of {totalPages}
+                      </span>
+
+                      <Button
+                        variant="outline"
+                        disabled={page === totalPages}
+                        onClick={() => setPage((p) => p + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
 
               {/* Records */}
@@ -175,6 +273,15 @@ export default function PatientDashboard() {
           </CardContent>
         </Card>
       </div>
+      <BookAppointmentModal
+        open={openBooking}
+        onClose={() => setOpenBooking(false)}
+        onSuccess={() => {
+          setOpenBooking(false);
+          // later we will refetch appointments here
+          loadAppointments();
+        }}
+      />
     </div>
   );
 }
