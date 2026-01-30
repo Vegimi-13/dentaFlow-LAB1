@@ -68,6 +68,7 @@ export const login = async (email, password) => {
 
   const accessToken = generateAccessToken({
     id: user.id,
+    email:user.email,
     role: user.role.name,
   })
 

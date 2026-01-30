@@ -4,6 +4,20 @@ import prisma from '../prisma/client.js'
  * PATIENT → book appointment
  */
 export const createAppointment = async (patientId, data) => {
+  const existing = await prisma.appointment.findFirst({
+    where: {
+      doctorId,
+      date: new Date(date),
+      status: {
+        not: "CANCELLED",
+      },
+    },
+  })
+
+  if (existing) {
+    throw new Error("This time slot is already booked")
+  }
+
   return prisma.appointment.create({
     data: {
       ...data,

@@ -61,6 +61,10 @@ export const deletePatient = async (id) => {
  * PATIENT → create own profile
  */
 export const createPatientForUser = async (userId, data) => {
+  if (data.dateOfBirth && typeof data.dateOfBirth === 'string') {
+    data.dateOfBirth = new Date(data.dateOfBirth)
+  }
+
   return prisma.patient.create({
     data: {
       ...data,
@@ -82,6 +86,10 @@ export const getPatientByUserId = async (userId) => {
  * PATIENT → update own profile
  */
 export const updatePatientByUserId = async (userId, data) => {
+  if (data.dateOfBirth && typeof data.dateOfBirth === 'string') {
+    data.dateOfBirth = new Date(data.dateOfBirth)
+  }
+
   return prisma.patient.update({
     where: { userId },
     data,
