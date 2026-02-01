@@ -78,6 +78,20 @@ export const getAppointmentsByDoctor = async (doctorId) => {
   });
 };
 
+// Get appointment by ID
+
+export const getAppointmentById = async (id) => {
+  return prisma.appointment.findUnique({
+    where: { id },
+    include: {
+      patient: true,
+      doctor: {
+        select: { id: true, email: true },
+      },
+    },
+  });
+};
+
 // ADMIN / DOCTOR → get all appointments
 
 export const getAllAppointments = async () => {
@@ -108,3 +122,5 @@ export const deleteAppointment = async (id) => {
     where: { id },
   });
 };
+
+

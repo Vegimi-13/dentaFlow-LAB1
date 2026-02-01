@@ -1,65 +1,63 @@
-import { Router } from 'express'
+import { Router } from "express";
 
-import * as appointmentController from '../controllers/appointment.controller.js'
-import protect from '../middlewares/auth.middleware.js'
-import allow from '../middlewares/role.middleware.js'
+import * as appointmentController from "../controllers/appointment.controller.js";
+import protect from "../middlewares/auth.middleware.js";
+import allow from "../middlewares/role.middleware.js";
 
-const router = Router()
+const router = Router();
 
 //  All appointment routes require authentication
-router.use(protect)
+router.use(protect);
 
+// PATIENT → book appointment
 
- // PATIENT → book appointment
+router.post("/", allow("PATIENT"), appointmentController.createAppointment);
 
-router.post(
-  '/',
-  allow('PATIENT'),
-  appointmentController.createAppointment
-)
+// ADMIN / DOCTOR → get all appointments
 
-
- // ADMIN / DOCTOR → get all appointments
- 
 router.get(
-  '/',
-  allow('ADMIN', 'DOCTOR'),
-  appointmentController.getAllAppointments
-)
+  "/",
+  allow("ADMIN", "DOCTOR"),
+  appointmentController.getAllAppointments,
+);
 
+// DOCTOR → get his schedule
 
- // DOCTOR → get his schedule
- 
 router.get(
-  '/doctor/me',
-  allow('DOCTOR'),
-  appointmentController.getMyDoctorAppointments
-)
+  "/doctor/me",
+  allow("DOCTOR"),
+  appointmentController.getMyDoctorAppointments,
+);
+
+// Get appointment by ID
+
 
 
 //  PATIENT → get his bookings
- 
+
 router.get(
-  '/patient/me',
-  allow('PATIENT'),
-  appointmentController.getMyPatientAppointments
-)
+  "/patient/me",
+  allow("PATIENT"),
+  appointmentController.getMyPatientAppointments,
+);
 
+// DOCTOR / ADMIN → get appointment by ID
+router.get(
+  "/:id",
+  allow("DOCTOR", "ADMIN"),
+  appointmentController.getAppointmentById,
+);
 
- // DOCTOR / ADMIN → update appointment (status, date, notes)
- 
+// DOCTOR / ADMIN → update appointment (status, date, notes)
+
 router.put(
-  '/:id',
-  allow('DOCTOR', 'ADMIN'),
-  appointmentController.updateAppointment
-)
+  "/:id",
+  allow("DOCTOR", "ADMIN"),
+  appointmentController.updateAppointment,
+);
 
- // ADMIN → delete appointment
- 
-router.delete(
-  '/:id',
-  allow('ADMIN'),
-  appointmentController.deleteAppointment
-)
+// ADMIN → delete appointment
 
-export default router
+router.delete("/:id", allow("ADMIN"), appointmentController.deleteAppointment);
+
+export default router;

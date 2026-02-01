@@ -7,3 +7,11 @@ export const createAppointment = (data) => {
 export const getMyAppointments = () => {
   return api.get("/appointments/patient/me")
 }
+
+export const getMyDoctorAppointments = () => {
+  return api.get("/appointments/doctor/me")
+}
+
+export const updateAppointmentStatus = (id, status) => {
+  return api.put(`/appointments/${id}`, { status })
+}

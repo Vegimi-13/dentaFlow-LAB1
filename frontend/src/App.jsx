@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import PublicRoute from "./components/PublicRoute";
+import AppointmentDetails from "./pages/AppointmentDetails";
 
 function App() {
   return (
@@ -45,6 +46,14 @@ function App() {
           element={
             <ProtectedRoute role="DOCTOR">
               <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/appointments/:id"
+          element={
+            <ProtectedRoute role="DOCTOR">
+              <AppointmentDetails />
             </ProtectedRoute>
           }
         />
