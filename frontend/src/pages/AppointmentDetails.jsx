@@ -1,27 +1,27 @@
-import { useEffect, useState } from "react"
-import { useParams, useNavigate } from "react-router-dom"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { useForm } from "react-hook-form"
-import { toast } from "react-toastify"
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useForm } from "react-hook-form";
+import { toast } from "react-toastify";
 
-import api from "../api/axios"
+import api from "../api/axios";
 
 export default function AppointmentDetails() {
-  const { id } = useParams()
-  const navigate = useNavigate()
+  const { id } = useParams();
+  const navigate = useNavigate();
 
-  const [appointment, setAppointment] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [appointment, setAppointment] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const {
     register,
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm()
+  } = useForm();
 
   /* =====================
      Load appointment
@@ -31,38 +31,36 @@ export default function AppointmentDetails() {
       .get(`/appointments/${id}`)
       .then((res) => setAppointment(res.data))
       .catch(() => {
-        toast.error("Failed to load appointment")
-        navigate("/doctor")
+        toast.error("Failed to load appointment");
+        navigate("/doctor");
       })
-      .finally(() => setLoading(false))
-  }, [id, navigate])
+      .finally(() => setLoading(false));
+  }, [id, navigate]);
 
   /* =====================
      Submit medical record
   ===================== */
   const onSubmit = async (data) => {
     try {
-      await api.post(`/records/from-appointment/${id}`, data)
-      toast.success("Appointment completed")
-      navigate("/doctor")
+      await api.post(`/records/from-appointment/${id}`, data);
+      toast.success("Appointment completed");
+      navigate("/doctor");
     } catch (err) {
-      toast.error(
-        err.response?.data?.error || "Failed to save medical record"
-      )
+      toast.error(err.response?.data?.error || "Failed to save medical record");
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-500">
         Loading appointment…
       </div>
-    )
+    );
   }
 
-  if (!appointment) return null
+  if (!appointment) return null;
 
-  const { patient } = appointment
+  const { patient } = appointment;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -96,12 +94,12 @@ export default function AppointmentDetails() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-slate-700">
               <div>
-                <strong>Name:</strong> {patient.firstName}{" "}
-                {patient.lastName}
+                <strong>Name:</strong> {patient.user.firstName}{" "}
+                {patient.user.lastName}
               </div>
 
               <div>
-                <strong>Phone:</strong> {patient.phone || "—"}
+                <strong>Phone:</strong> {patient.user.phone || "—"}
               </div>
 
               <div>
@@ -125,10 +123,7 @@ export default function AppointmentDetails() {
             </CardHeader>
 
             <CardContent>
-              <form
-                onSubmit={handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div>
                   <Label>Diagnosis</Label>
                   <Input
@@ -185,5 +180,5 @@ export default function AppointmentDetails() {
         </div>
       </div>
     </div>
-  )
+  );
 }

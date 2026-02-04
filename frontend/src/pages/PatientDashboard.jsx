@@ -9,12 +9,19 @@ import { useAuth } from "../contexts/AuthContext";
 import { getMyProfile, updateMyProfile } from "../api/patient";
 import CompleteProfileForm from "../components/CompleteProfileForm";
 
+/* =====================
+   Constants
+===================== */
+
+const ITEMS_PER_PAGE = 5;
+
 const statusStyles = {
   PENDING: "border border-yellow-400 text-yellow-700 bg-yellow-50",
   CONFIRMED: "border border-blue-400 text-blue-700 bg-blue-50",
   COMPLETED: "border border-green-400 text-green-700 bg-green-50",
   CANCELLED: "border border-red-400 text-red-700 bg-red-50",
 };
+
 const statusPriority = {
   PENDING: 1,
   CONFIRMED: 2,
@@ -22,55 +29,73 @@ const statusPriority = {
   CANCELLED: 4,
 };
 
+/* =====================
+   Component
+===================== */
+
 export default function PatientDashboard() {
   const { user, logout } = useAuth();
 
-  // core data
+  // data
   const [appointments, setAppointments] = useState([]);
   const [records, setRecords] = useState([]);
   const [profile, setProfile] = useState(null);
 
-  // ui state
-  const [loading, setLoading] = useState(true);
-  const [recordsLoading, setRecordsLoading] = useState(true);
+  // ui
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loadingRecords, setLoadingRecords] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [openBooking, setOpenBooking] = useState(false);
   const [now, setNow] = useState(new Date());
 
-  // pagination
-  const ITEMS_PER_PAGE = 5;
+  // filters & pagination
   const [page, setPage] = useState(1);
-
-  // filters
-  const [timeFilter, setTimeFilter] = useState("ALL"); // ALL | 24H | 7D | 30D
-  const [statusFilter, setStatusFilter] = useState("ALL"); // ALL | PENDING | CONFIRMED | COMPLETED
+  const [timeFilter, setTimeFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   /* =====================
-     Fetching
+     Fetch helpers
   ===================== */
 
-  const loadAppointments = () => {
-    getMyAppointments()
-      .then((res) => setAppointments(res.data))
-      .catch(() => setAppointments([]));
+  const fetchProfile = async () => {
+    try {
+      const res = await getMyProfile();
+      setProfile(res.data);
+    } catch {
+      setProfile(null);
+    } finally {
+      setLoadingProfile(false);
+    }
   };
 
-  useEffect(() => {
-    loadAppointments();
-  }, []);
+  const fetchAppointments = async () => {
+    try {
+      const res = await getMyAppointments();
+      setAppointments(res.data);
+    } catch {
+      setAppointments([]);
+    }
+  };
+
+  const fetchRecords = async () => {
+    try {
+      const res = await getMyMedicalRecords();
+      setRecords(res.data);
+    } catch {
+      setRecords([]);
+    } finally {
+      setLoadingRecords(false);
+    }
+  };
+
+  /* =====================
+     Effects
+  ===================== */
 
   useEffect(() => {
-    getMyProfile()
-      .then((res) => setProfile(res.data))
-      .catch(() => setProfile(null))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    getMyMedicalRecords()
-      .then((res) => setRecords(res.data))
-      .catch(() => setRecords([]))
-      .finally(() => setRecordsLoading(false));
+    fetchProfile();
+    fetchAppointments();
+    fetchRecords();
   }, []);
 
   useEffect(() => {
@@ -81,6 +106,12 @@ export default function PatientDashboard() {
   /* =====================
      Derived data
   ===================== */
+
+  const isProfileComplete =
+    Boolean(profile?.user?.firstName) &&
+    Boolean(profile?.user?.lastName) &&
+    Boolean(profile?.user?.phone) &&
+    Boolean(profile?.dateOfBirth);
 
   const nextAppointment = appointments.find(
     (a) => new Date(a.date) > new Date(),
@@ -94,7 +125,7 @@ export default function PatientDashboard() {
     if (timeFilter === "ALL") return list;
 
     const now = new Date();
-    let cutoff = new Date();
+    const cutoff = new Date();
 
     if (timeFilter === "24H") cutoff.setHours(now.getHours() - 24);
     if (timeFilter === "7D") cutoff.setDate(now.getDate() - 7);
@@ -104,18 +135,15 @@ export default function PatientDashboard() {
   };
 
   const filteredAppointments = applyTimeFilter(
-  statusFilter === "ALL"
-    ? appointments
-    : appointments.filter((a) => a.status === statusFilter)
-).sort((a, b) => {
-  // 1️⃣ status order (PENDING → CONFIRMED → COMPLETED)
-  if (statusPriority[a.status] !== statusPriority[b.status]) {
-    return statusPriority[a.status] - statusPriority[b.status];
-  }
-
-  // 2️⃣ same status → earlier appointment first
-  return new Date(a.date) - new Date(b.date);
-});
+    statusFilter === "ALL"
+      ? appointments
+      : appointments.filter((a) => a.status === statusFilter),
+  ).sort((a, b) => {
+    if (statusPriority[a.status] !== statusPriority[b.status]) {
+      return statusPriority[a.status] - statusPriority[b.status];
+    }
+    return new Date(a.date) - new Date(b.date);
+  });
 
   const totalPages = Math.ceil(filteredAppointments.length / ITEMS_PER_PAGE);
 
@@ -154,53 +182,27 @@ export default function PatientDashboard() {
 
         {/* Stats */}
         <div className="grid sm:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm text-slate-500">
-                Next appointment
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {nextAppointment ? (
-                <>
-                  <p className="font-medium">
-                    {new Date(nextAppointment.date).toLocaleDateString()} •{" "}
-                    {new Date(nextAppointment.date).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Doctor: {nextAppointment.doctor.email}
-                  </p>
-                </>
-              ) : (
-                <p className="text-slate-400">No upcoming appointments</p>
-              )}
-            </CardContent>
-          </Card>
+          <StatCard
+            title="Next appointment"
+            value={
+              nextAppointment
+                ? `${new Date(nextAppointment.date).toLocaleDateString()} • ${new Date(
+                    nextAppointment.date,
+                  ).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}`
+                : "No upcoming"
+            }
+            sub={
+              nextAppointment
+                ? `Doctor: ${nextAppointment.doctor?.email ?? "—"}`
+                : null
+            }
+          />
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm text-slate-500">
-                Total visits
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg font-medium">{completedVisits}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm text-slate-500">
-                Medical records
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg font-medium">{records.length}</p>
-            </CardContent>
-          </Card>
+          <StatCard title="Total visits" value={completedVisits} />
+          <StatCard title="Medical records" value={records.length} />
         </div>
 
         {/* Main */}
@@ -219,9 +221,13 @@ export default function PatientDashboard() {
 
               {/* Appointments */}
               <TabsContent value="appointments" className="pt-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
-                  <p className="text-slate-500">Manage your appointments</p>
+                {!isProfileComplete && (
+                  <div className="border border-yellow-300 bg-yellow-50 text-yellow-800 p-4 rounded-md text-sm">
+                    ⚠️ Complete your profile before booking an appointment.
+                  </div>
+                )}
 
+                <div className="flex justify-between gap-3">
                   <div className="flex gap-2">
                     <select
                       value={timeFilter}
@@ -250,18 +256,15 @@ export default function PatientDashboard() {
                       <option value="CONFIRMED">Confirmed</option>
                       <option value="COMPLETED">Completed</option>
                     </select>
-
-                    <Button onClick={() => setOpenBooking(true)}>
-                      Book new appointment
-                    </Button>
                   </div>
-                </div>
 
-                {filteredAppointments.length === 0 && (
-                  <p className="text-slate-500">
-                    No appointments match your filters.
-                  </p>
-                )}
+                  <Button
+                    disabled={!isProfileComplete}
+                    onClick={() => setOpenBooking(true)}
+                  >
+                    Book new appointment
+                  </Button>
+                </div>
 
                 <div className="space-y-3">
                   {paginatedAppointments.map((appt) => (
@@ -278,7 +281,7 @@ export default function PatientDashboard() {
                           })}
                         </p>
                         <p className="text-sm text-slate-500">
-                          Doctor: {appt.doctor.email}
+                          Doctor: {appt.doctor?.email ?? "—"}
                         </p>
                       </div>
 
@@ -292,35 +295,11 @@ export default function PatientDashboard() {
                     </div>
                   ))}
                 </div>
-
-                {totalPages > 1 && (
-                  <div className="flex justify-between pt-4">
-                    <Button
-                      variant="outline"
-                      disabled={page === 1}
-                      onClick={() => setPage((p) => p - 1)}
-                    >
-                      Previous
-                    </Button>
-
-                    <span className="text-sm text-slate-500">
-                      Page {page} of {totalPages}
-                    </span>
-
-                    <Button
-                      variant="outline"
-                      disabled={page === totalPages}
-                      onClick={() => setPage((p) => p + 1)}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                )}
               </TabsContent>
 
               {/* Records */}
               <TabsContent value="records" className="pt-6">
-                {recordsLoading ? (
+                {loadingRecords ? (
                   <p className="text-slate-500">Loading medical records…</p>
                 ) : records.length === 0 ? (
                   <p className="text-slate-500">No medical records found.</p>
@@ -359,7 +338,7 @@ export default function PatientDashboard() {
                             )}
 
                             <p className="text-xs text-slate-500">
-                              Doctor: {r.doctor?.email}
+                              Doctor: {r.doctor?.email ?? "—"}
                             </p>
                           </CardContent>
                         </Card>
@@ -370,36 +349,54 @@ export default function PatientDashboard() {
 
               {/* Profile */}
               <TabsContent value="profile" className="pt-6">
-                {loading && <p>Loading profile…</p>}
+                {loadingProfile && <p>Loading profile…</p>}
 
-                {!loading && !profile && (
-                  <CompleteProfileForm onSuccess={setProfile} />
+                {!loadingProfile && !profile && (
+                  <CompleteProfileForm onSuccess={fetchProfile} />
                 )}
 
-                {!loading && profile && !editMode && (
+                {!loadingProfile && profile && !editMode && (
                   <div className="space-y-2">
                     <p>
-                      <strong>Name:</strong> {profile.firstName}{" "}
-                      {profile.lastName}
+                      <strong>First name:</strong>{" "}
+                      {profile.user?.firstName ?? "—"}
+                    </p>
+                    <p>
+                      <strong>Last name:</strong>{" "}
+                      {profile.user?.lastName ?? "—"}
                     </p>
                     <p>
                       <strong>Email:</strong> {user.email}
                     </p>
                     <p>
-                      <strong>Phone:</strong> {profile.phone || "—"}
+                      <strong>Phone:</strong> {profile.user.phone || "—"}
                     </p>
+                    <p>
+                      <strong>Date of birth:</strong>{" "}
+                      {profile.dateOfBirth
+                        ? new Date(profile.dateOfBirth).toLocaleDateString()
+                        : "—"}
+                    </p>
+
                     <Button variant="outline" onClick={() => setEditMode(true)}>
                       Edit profile
                     </Button>
                   </div>
                 )}
 
-                {!loading && profile && editMode && (
+                {!loadingProfile && profile && editMode && (
                   <CompleteProfileForm
-                    initialValues={profile}
+                    initialValues={{
+                      firstName: profile.user?.firstName || "",
+                      lastName: profile.user?.lastName || "",
+                      phone: profile.phone || "",
+                      dateOfBirth: profile.dateOfBirth
+                        ? profile.dateOfBirth.split("T")[0]
+                        : "",
+                    }}
                     submitAction={updateMyProfile}
-                    onSuccess={(p) => {
-                      setProfile(p);
+                    onSuccess={async () => {
+                      await fetchProfile();
                       setEditMode(false);
                     }}
                     onCancel={() => setEditMode(false)}
@@ -416,9 +413,27 @@ export default function PatientDashboard() {
         onClose={() => setOpenBooking(false)}
         onSuccess={() => {
           setOpenBooking(false);
-          loadAppointments();
+          fetchAppointments();
         }}
       />
     </div>
+  );
+}
+
+/* =====================
+   Helper
+===================== */
+
+function StatCard({ title, value, sub }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm text-slate-500">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-lg font-medium">{value}</p>
+        {sub && <p className="text-xs text-slate-500">{sub}</p>}
+      </CardContent>
+    </Card>
   );
 }

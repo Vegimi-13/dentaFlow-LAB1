@@ -1,5 +1,25 @@
 import prisma from "../prisma/client.js";
 
+// Get available doctors for appointment booking
+export const getAvailableDoctors = async () => {
+  return prisma.user.findMany({
+    where: {
+      role: {
+        name: "DOCTOR",
+      },
+    },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+    },
+    orderBy: {
+      firstName: "asc",
+    },
+  });
+};
+
 // PATIENT → book appointment
 // userId comes from JWT (req.user.id)
 
@@ -73,7 +93,19 @@ export const getAppointmentsByDoctor = async (doctorId) => {
     where: { doctorId },
     orderBy: { date: "asc" },
     include: {
-      patient: true,
+      patient: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+            },
+          },
+        },
+      },
     },
   });
 };
@@ -84,9 +116,21 @@ export const getAppointmentById = async (id) => {
   return prisma.appointment.findUnique({
     where: { id },
     include: {
-      patient: true,
+      patient: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+            },
+          },
+        },
+      },
       doctor: {
-        select: { id: true, email: true },
+        select: { id: true, email: true, firstName: true, lastName: true },
       },
     },
   });
@@ -122,5 +166,3 @@ export const deleteAppointment = async (id) => {
     where: { id },
   });
 };
-
-

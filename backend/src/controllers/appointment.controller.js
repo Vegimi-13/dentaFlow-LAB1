@@ -1,5 +1,15 @@
 import * as appointmentService from "../services/appointment.service.js";
 
+//  PATIENT → get available doctors for booking
+export const getAvailableDoctors = async (req, res) => {
+  try {
+    const doctors = await appointmentService.getAvailableDoctors();
+    res.json(doctors);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 //  PATIENT → book appointment
 
 export const createAppointment = async (req, res) => {
@@ -90,21 +100,19 @@ export const deleteAppointment = async (req, res) => {
   }
 };
 
-
-
 //GET Appointment by ID
 export const getAppointmentById = async (req, res) => {
   try {
-    const id = Number(req.params.id)
+    const id = Number(req.params.id);
 
-    const appointment = await appointmentService.getAppointmentById(id)
+    const appointment = await appointmentService.getAppointmentById(id);
 
     if (!appointment) {
-      return res.status(404).json({ error: "Appointment not found" })
+      return res.status(404).json({ error: "Appointment not found" });
     }
 
-    res.json(appointment)
+    res.json(appointment);
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    res.status(500).json({ error: error.message });
   }
-}
+};

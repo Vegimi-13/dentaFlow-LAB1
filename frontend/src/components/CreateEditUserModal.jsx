@@ -39,6 +39,9 @@ export default function CreateEditUserModal({
     defaultValues: {
       email: "",
       password: "",
+      firstName: "",
+      lastName: "",
+      phone: "",
       role: "PATIENT",
     },
   });
@@ -50,12 +53,18 @@ export default function CreateEditUserModal({
     if (user) {
       reset({
         email: user.email,
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        phone: user.phone || "",
         role: user.role?.name || "PATIENT",
       });
     } else {
       reset({
         email: "",
         password: "",
+        firstName: "",
+        lastName: "",
+        phone: "",
         role: "PATIENT",
       });
     }
@@ -87,6 +96,24 @@ export default function CreateEditUserModal({
               {...register("email", { required: true })}
               disabled={isEdit}
             />
+          </div>
+
+          {/* First Name */}
+          <div>
+            <Label>First Name</Label>
+            <Input {...register("firstName")} placeholder="Enter first name" />
+          </div>
+
+          {/* Last Name */}
+          <div>
+            <Label>Last Name</Label>
+            <Input {...register("lastName")} placeholder="Enter last name" />
+          </div>
+
+          {/* Phone */}
+          <div>
+            <Label>Phone</Label>
+            <Input {...register("phone")} placeholder="Enter phone number" />
           </div>
 
           {/* Password (only when creating) */}

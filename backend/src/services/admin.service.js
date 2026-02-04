@@ -6,6 +6,9 @@ export const getAllUsers = async () => {
     select: {
       id: true,
       email: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
       role: {
         select: {
           name: true,
@@ -25,7 +28,14 @@ export const updateUserPassword = async (userId, hashedPassword) => {
   });
 };
 
-export const createUser = async ({ email, password, role }) => {
+export const createUser = async ({
+  email,
+  password,
+  role,
+  firstName,
+  lastName,
+  phone,
+}) => {
   const hashed = await bcrypt.hash(password, 10);
 
   // Find the role by name to get its ID
@@ -41,6 +51,9 @@ export const createUser = async ({ email, password, role }) => {
     data: {
       email,
       password: hashed,
+      firstName,
+      lastName,
+      phone,
       roleId: roleRecord.id,
     },
   });

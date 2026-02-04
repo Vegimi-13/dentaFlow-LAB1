@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,9 +8,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "react-toastify";
 
-import { createAppointment } from "../api/appointment";
+import { createAppointment, getAvailableDoctors } from "../api/appointment";
 
 // Simple v1 slots (later backend-driven)
 const TIME_SLOTS = [
@@ -30,6 +37,28 @@ export default function BookAppointmentModal({ open, onClose, onSuccess }) {
   const [doctorId, setDoctorId] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [doctors, setDoctors] = useState([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
+
+  // Fetch doctors when modal opens
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      if (open) {
+        try {
+          setLoadingDoctors(true);
+          const response = await getAvailableDoctors();
+          setDoctors(response.data);
+        } catch (error) {
+          console.error("Failed to load doctors:", error);
+          toast.error("Failed to load doctors");
+        } finally {
+          setLoadingDoctors(false);
+        }
+      }
+    };
+
+    fetchDoctors();
+  }, [open]);
 
   const handleSubmit = async () => {
     if (!selectedDate || !selectedTime || !doctorId) {
@@ -106,14 +135,28 @@ export default function BookAppointmentModal({ open, onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* Doctor (temporary input – will become dropdown) */}
+          {/* Doctor dropdown */}
           <div>
             <Label>Doctor</Label>
-            <Input
-              placeholder="Doctor ID (temporary)"
-              value={doctorId}
-              onChange={(e) => setDoctorId(e.target.value)}
-            />
+            <Select value={doctorId} onValueChange={setDoctorId}>
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={
+                    loadingDoctors ? "Loading doctors..." : "Select a doctor"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {doctors.map((doctor) => (
+                  <SelectItem key={doctor.id} value={doctor.id.toString()}>
+                    {doctor.email}{" "}
+                    {doctor.firstName && doctor.lastName
+                      ? `- ${doctor.firstName} ${doctor.lastName}`
+                      : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Notes */}

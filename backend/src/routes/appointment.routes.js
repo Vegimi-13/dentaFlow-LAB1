@@ -9,6 +9,9 @@ const router = Router();
 //  All appointment routes require authentication
 router.use(protect);
 
+// Get available doctors for booking (accessible to patients)
+router.get("/doctors", appointmentController.getAvailableDoctors);
+
 // PATIENT → book appointment
 
 router.post("/", allow("PATIENT"), appointmentController.createAppointment);
@@ -30,8 +33,6 @@ router.get(
 );
 
 // Get appointment by ID
-
-
 
 //  PATIENT → get his bookings
 

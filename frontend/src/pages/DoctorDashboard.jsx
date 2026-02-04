@@ -1,84 +1,85 @@
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAuth } from "../contexts/AuthContext"
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "../contexts/AuthContext";
 import {
   getMyDoctorAppointments,
   updateAppointmentStatus,
-} from "../api/appointment"
+} from "../api/appointment";
 
 export default function DoctorDashboard() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const [appointments, setAppointments] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // pagination
-  const [page, setPage] = useState(1)
-  const pageSize = 5
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
 
   const loadAppointments = async () => {
     try {
-      const res = await getMyDoctorAppointments()
-      setAppointments(res.data)
+      const res = await getMyDoctorAppointments();
+      setAppointments(res.data);
     } catch {
-      setAppointments([])
+      setAppointments([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    loadAppointments()
-  }, [])
+    loadAppointments();
+  }, []);
 
   /* =====================
      Derived data
   ===================== */
 
-  const patientsCount = new Set(
-    appointments.map((a) => a.patient.id),
-  ).size
+  const patientsCount = new Set(appointments.map((a) => a.patient.id)).size;
 
   const nextAppointment = appointments.find(
     (a) => new Date(a.date) > new Date(),
-  )
+  );
 
   const todayCount = appointments.filter(
-    (a) =>
-      new Date(a.date).toDateString() ===
-      new Date().toDateString(),
-  ).length
+    (a) => new Date(a.date).toDateString() === new Date().toDateString(),
+  ).length;
 
   // status priority
   const statusOrder = {
     PENDING: 1,
     CONFIRMED: 2,
     COMPLETED: 3,
-  }
+  };
 
   const sortedAppointments = [...appointments].sort((a, b) => {
     if (statusOrder[a.status] !== statusOrder[b.status]) {
-      return statusOrder[a.status] - statusOrder[b.status]
+      return statusOrder[a.status] - statusOrder[b.status];
     }
-    return new Date(a.date) - new Date(b.date)
-  })
+    return new Date(a.date) - new Date(b.date);
+  });
 
   const paginatedAppointments = sortedAppointments.slice(
     (page - 1) * pageSize,
     page * pageSize,
-  )
+  );
 
   /* =====================
      Actions
   ===================== */
 
   const confirmAppointment = async (id) => {
-    await updateAppointmentStatus(id, "CONFIRMED")
-    loadAppointments()
-  }
+    await updateAppointmentStatus(id, "CONFIRMED");
+    loadAppointments();
+  };
+
+  const cancelAppointment = async (id) => {
+    await updateAppointmentStatus(id, "CANCELLED");
+    loadAppointments();
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -89,9 +90,7 @@ export default function DoctorDashboard() {
             <h1 className="text-2xl font-semibold text-slate-800">
               Doctor dashboard
             </h1>
-            <p className="text-slate-500 text-sm">
-              Logged in as {user?.email}
-            </p>
+            <p className="text-slate-500 text-sm">Logged in as {user?.email}</p>
           </div>
 
           <Button variant="outline" onClick={logout}>
@@ -103,9 +102,7 @@ export default function DoctorDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm text-slate-500">
-                Patients
-              </CardTitle>
+              <CardTitle className="text-sm text-slate-500">Patients</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-lg font-medium">{patientsCount}</p>
@@ -115,7 +112,6 @@ export default function DoctorDashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm text-slate-500">
-                
                 Next appointment
               </CardTitle>
             </CardHeader>
@@ -130,9 +126,8 @@ export default function DoctorDashboard() {
                     })}
                   </p>
                   <p className="text-xs text-slate-500">
-                    Patient:{" "}
-                    {nextAppointment.patient.firstName}{" "}
-                    {nextAppointment.patient.lastName}
+                    Patient: {nextAppointment.patient.user.firstName}{" "}
+                    {nextAppointment.patient.user.lastName}
                   </p>
                 </>
               ) : (
@@ -143,9 +138,7 @@ export default function DoctorDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm text-slate-500">
-                Today
-              </CardTitle>
+              <CardTitle className="text-sm text-slate-500">Today</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-lg font-medium">{todayCount}</p>
@@ -181,8 +174,8 @@ export default function DoctorDashboard() {
                   </p>
 
                   <p className="text-sm text-slate-500">
-                    Patient: {appt.patient.firstName}{" "}
-                    {appt.patient.lastName}
+                    Patient: {appt.patient.user.firstName}{" "}
+                    {appt.patient.user.lastName}
                   </p>
 
                   <span
@@ -190,8 +183,10 @@ export default function DoctorDashboard() {
                       appt.status === "PENDING"
                         ? "border-yellow-400 text-yellow-700"
                         : appt.status === "CONFIRMED"
-                        ? "border-blue-400 text-blue-700"
-                        : "border-green-400 text-green-700"
+                          ? "border-blue-400 text-blue-700"
+                          : appt.status === "CANCELLED"
+                            ? "border-red-400 text-red-700"
+                            : "border-green-400 text-green-700"
                     }`}
                   >
                     {appt.status}
@@ -201,12 +196,21 @@ export default function DoctorDashboard() {
                 {/* Actions */}
                 <div className="flex gap-2">
                   {appt.status === "PENDING" && (
-                    <Button
-                      size="sm"
-                      onClick={() => confirmAppointment(appt.id)}
-                    >
-                      Confirm
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => confirmAppointment(appt.id)}
+                      >
+                        Confirm
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => cancelAppointment(appt.id)}
+                      >
+                        Cancel
+                      </Button>
+                    </>
                   )}
 
                   {appt.status === "CONFIRMED" && (
@@ -242,9 +246,7 @@ export default function DoctorDashboard() {
                   Previous
                 </Button>
 
-                <span className="text-sm text-slate-500">
-                  Page {page}
-                </span>
+                <span className="text-sm text-slate-500">Page {page}</span>
 
                 <Button
                   variant="outline"
@@ -260,5 +262,5 @@ export default function DoctorDashboard() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
