@@ -90,6 +90,40 @@ export const getMyMedicalRecords = async (req, res) => {
 };
 
 /**
+ * Get medical record by appointment ID
+ */
+export const getMedicalRecordByAppointment = async (req, res) => {
+  try {
+    const appointmentId = Number(req.params.appointmentId);
+    const record =
+      await medicalRecordService.getMedicalRecordByAppointment(appointmentId);
+    res.json(record);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+/**
+ * Get single medical record by ID
+ */
+export const getMedicalRecord = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const userId = req.user.id;
+    const userRole = req.user.role.name;
+
+    const record = await medicalRecordService.getMedicalRecord(
+      id,
+      userId,
+      userRole,
+    );
+    res.json(record);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+/**
  * DOCTOR → update record
  */
 export const updateMedicalRecord = async (req, res) => {

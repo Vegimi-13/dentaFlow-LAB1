@@ -226,8 +226,14 @@ export default function DoctorDashboard() {
                   )}
 
                   {appt.status === "COMPLETED" && (
-                    <Button size="sm" disabled>
-                      Completed
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        navigate(`/doctor/appointments/${appt.id}?view=true`)
+                      }
+                    >
+                      View Record
                     </Button>
                   )}
                 </div>

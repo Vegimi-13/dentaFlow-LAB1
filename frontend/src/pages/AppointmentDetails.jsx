@@ -7,43 +7,151 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
-
+import Odontogram from "@/components/Odontogram";
 import api from "../api/axios";
 
-export default function AppointmentDetails() {
+/**
+ * mode:
+ *  - "edit" → doctor editing from appointment
+ *  - "view" → patient viewing medical record
+ */
+export default function AppointmentDetails({ mode = "edit" }) {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // Check URL params for view mode (when doctor views completed appointments)
+  const urlParams = new URLSearchParams(window.location.search);
+  const isViewMode = mode === "view" || urlParams.get("view") === "true";
+  const isReadOnly = isViewMode;
+
   const [appointment, setAppointment] = useState(null);
+  const [medicalRecord, setMedicalRecord] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedTeeth, setSelectedTeeth] = useState([]);
 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { isSubmitting },
   } = useForm();
 
   /* =====================
-     Load appointment
+     Load appointment or medical record
   ===================== */
   useEffect(() => {
-    api
-      .get(`/appointments/${id}`)
-      .then((res) => setAppointment(res.data))
-      .catch(() => {
-        toast.error("Failed to load appointment");
-        navigate("/doctor");
-      })
-      .finally(() => setLoading(false));
-  }, [id, navigate]);
+    if (mode === "view") {
+      // Patient viewing medical record directly by record ID
+      const recordId = id;
+
+      api
+        .get(`/records/${recordId}`)
+        .then((res) => {
+          const record = res.data;
+          setMedicalRecord(record);
+
+          // Create a mock appointment object for rendering
+          setAppointment({
+            id: recordId,
+            date: record.createdAt,
+            status: "COMPLETED",
+            patient: record.patient,
+            doctor: record.doctor,
+          });
+
+          // Populate form with record data
+          reset({
+            diagnosis: record.diagnosis || "",
+            treatment: record.treatment || "",
+            prescription: record.prescription || "",
+            notes: record.notes || "",
+          });
+
+          setSelectedTeeth(record.teeth || []);
+        })
+        .catch(() => {
+          toast.error("Failed to load medical record");
+          navigate(-1);
+        })
+        .finally(() => setLoading(false));
+    } else {
+      // Load appointment (doctor mode)
+      api
+        .get(`/appointments/${id}`)
+        .then((res) => {
+          const appt = res.data;
+          setAppointment(appt);
+
+          // If viewing a completed appointment, load the medical record
+          if (urlParams.get("view") === "true" && appt.status === "COMPLETED") {
+            api
+              .get(`/records/by-appointment/${id}`)
+              .then((recordRes) => {
+                const record = recordRes.data;
+                setMedicalRecord(record);
+
+                reset({
+                  diagnosis: record.diagnosis || "",
+                  treatment: record.treatment || "",
+                  prescription: record.prescription || "",
+                  notes: record.notes || "",
+                });
+
+                setSelectedTeeth(record.teeth || []);
+              })
+              .catch((error) => {
+                console.error("No medical record found:", error);
+                toast.error("No medical record found for this appointment");
+                // Don't navigate away, just show the appointment without record data
+              });
+          }
+        })
+        .catch(() => {
+          toast.error("Failed to load appointment");
+          navigate(-1);
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [id, mode, navigate, reset]);
 
   /* =====================
-     Submit medical record
+     Load medical record for existing appointment (DOCTOR VIEW MODE)
+  ===================== */
+  useEffect(() => {
+    if (mode !== "view") return;
+
+    // This effect is for doctors viewing appointments with existing records
+    // Patient view mode is handled above
+    api
+      .get(`/records/by-appointment/${id}`)
+      .then((res) => {
+        const record = res.data;
+
+        reset({
+          diagnosis: record.diagnosis || "",
+          treatment: record.treatment || "",
+          prescription: record.prescription || "",
+          notes: record.notes || "",
+        });
+
+        setSelectedTeeth(record.teeth || []);
+      })
+      .catch(() => {
+        // This is okay - appointment might not have a record yet
+      });
+  }, [mode, id, reset]);
+
+  /* =====================
+     Submit medical record (DOCTOR)
   ===================== */
   const onSubmit = async (data) => {
     try {
-      await api.post(`/records/from-appointment/${id}`, data);
-      toast.success("Appointment completed");
+      await api.post(`/records/from-appointment/${id}`, {
+        ...data,
+        teeth: selectedTeeth,
+      });
+
+      toast.success("Medical record saved");
       navigate("/doctor");
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to save medical record");
@@ -60,7 +168,7 @@ export default function AppointmentDetails() {
 
   if (!appointment) return null;
 
-  const { patient } = appointment;
+  const { patient, doctor } = appointment;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -69,7 +177,7 @@ export default function AppointmentDetails() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-semibold text-slate-800">
-              Appointment details
+              {isReadOnly ? "Medical Record" : "Appointment Details"}
             </h1>
             <p className="text-slate-500 text-sm">
               {new Date(appointment.date).toLocaleDateString()} •{" "}
@@ -77,6 +185,11 @@ export default function AppointmentDetails() {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
+              {isReadOnly && (
+                <span className="ml-3 px-3 py-1 text-xs bg-green-100 text-green-700 rounded font-medium border border-green-200">
+                  Completed
+                </span>
+              )}
             </p>
           </div>
 
@@ -85,95 +198,92 @@ export default function AppointmentDetails() {
           </Button>
         </div>
 
-        {/* Main layout */}
+        {/* Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* LEFT: Patient info */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle>Patient</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-slate-700">
-              <div>
-                <strong>Name:</strong> {patient.user.firstName}{" "}
-                {patient.user.lastName}
-              </div>
+          {/* LEFT */}
+          <div className="space-y-6">
+            {/* Patient */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Patient</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div>
+                  <strong>Name:</strong> {patient.user.firstName}{" "}
+                  {patient.user.lastName}
+                </div>
+                <div>
+                  <strong>Phone:</strong> {patient.user.phone || "—"}
+                </div>
+                <div>
+                  <strong>Date of birth:</strong>{" "}
+                  {patient.dateOfBirth
+                    ? new Date(patient.dateOfBirth).toLocaleDateString()
+                    : "—"}
+                </div>
+              </CardContent>
+            </Card>
 
-              <div>
-                <strong>Phone:</strong> {patient.user.phone || "—"}
-              </div>
+            {/* Doctor */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Treated by</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div>
+                  <strong>Name:</strong> {doctor.firstName} {doctor.lastName}
+                </div>
+                <div>
+                  <strong>Email:</strong> {doctor.email}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-              <div>
-                <strong>Date of birth:</strong>{" "}
-                {patient.dateOfBirth
-                  ? new Date(patient.dateOfBirth).toLocaleDateString()
-                  : "—"}
-              </div>
-
-              <div>
-                <strong>Status:</strong>{" "}
-                <span className="capitalize">{appointment.status}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* RIGHT: Medical record */}
+          {/* RIGHT */}
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Medical record</CardTitle>
+              <CardTitle>Medical details</CardTitle>
             </CardHeader>
 
             <CardContent>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div>
                   <Label>Diagnosis</Label>
-                  <Input
-                    {...register("diagnosis", { required: true })}
-                    placeholder="Diagnosis"
-                  />
+                  <Input disabled={isReadOnly} {...register("diagnosis")} />
                 </div>
 
                 <div>
                   <Label>Treatment</Label>
-                  <Input
-                    {...register("treatment", { required: true })}
-                    placeholder="Treatment performed"
-                  />
+                  <Input disabled={isReadOnly} {...register("treatment")} />
                 </div>
 
                 <div>
                   <Label>Prescription</Label>
-                  <Input
-                    {...register("prescription")}
-                    placeholder="Prescription (optional)"
-                  />
+                  <Input disabled={isReadOnly} {...register("prescription")} />
                 </div>
 
                 <div>
                   <Label>Notes</Label>
-                  <Textarea
-                    {...register("notes")}
-                    placeholder="Additional notes"
+                  <Textarea disabled={isReadOnly} {...register("notes")} />
+                </div>
+
+                <div>
+                  <Label>Teeth treated</Label>
+                  <Odontogram
+                    value={selectedTeeth}
+                    onChange={setSelectedTeeth}
+                    readOnly={isReadOnly}
                   />
                 </div>
 
-                {/* Later: dental chart goes HERE */}
-                <div className="border border-dashed rounded-md p-4 text-sm text-slate-400">
-                  Dental chart placeholder
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => navigate(-1)}
-                  >
-                    Cancel
-                  </Button>
-
-                  <Button type="submit" disabled={isSubmitting}>
-                    Save & complete
-                  </Button>
-                </div>
+                {!isReadOnly && (
+                  <div className="flex justify-end pt-4">
+                    <Button type="submit" disabled={isSubmitting}>
+                      Save & complete
+                    </Button>
+                  </div>
+                )}
               </form>
             </CardContent>
           </Card>

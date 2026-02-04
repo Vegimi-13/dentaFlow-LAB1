@@ -56,6 +56,20 @@ router.get(
 );
 
 /**
+ * Get medical record by appointment ID
+ */
+router.get(
+  "/by-appointment/:appointmentId",
+  allow("DOCTOR"),
+  medicalRecordController.getMedicalRecordByAppointment,
+);
+
+/**
+ * Get single medical record by ID
+ */
+router.get("/:id", medicalRecordController.getMedicalRecord);
+
+/**
  * DOCTOR → update medical record
  */
 router.put(
@@ -76,7 +90,7 @@ router.delete(
 router.get(
   "/patient/me",
   allow("PATIENT"),
-  medicalRecordController.getMyMedicalRecords
-)
+  medicalRecordController.getMyMedicalRecords,
+);
 
 export default router;

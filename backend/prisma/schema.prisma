@@ -59,6 +59,7 @@ model MedicalRecord {
   notes       String?
   diagnosis   String?
   treatment   String?
+  teeth         Json? //json type storing tooth data
 
   patientId   Int
   doctorId    Int

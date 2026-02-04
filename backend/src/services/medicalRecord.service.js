@@ -46,8 +46,8 @@ export const createMedicalRecordFromAppointment = async (
   // Create medical record and mark appointment as completed in a transaction
   return prisma.$transaction(async (prisma) => {
     // Filter data to only include valid MedicalRecord fields
-    const { diagnosis, treatment, notes } = data;
-    const filteredData = { diagnosis, treatment, notes };
+    const { diagnosis, treatment, notes, teeth } = data;
+    const filteredData = { diagnosis, treatment, notes, teeth };
 
     // Create the medical record
     const record = await prisma.medicalRecord.create({
@@ -150,6 +150,118 @@ export const getMedicalRecordsByUserId = async (userId) => {
   }
 
   return getRecordsForPatientUser(patient.id);
+};
+
+/**
+ * Get medical record by appointment ID
+ */
+export const getMedicalRecordByAppointment = async (appointmentId) => {
+  // First find the appointment to get patient and doctor info
+  const appointment = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+    include: {
+      patient: true,
+    },
+  });
+
+  if (!appointment) {
+    throw new Error("Appointment not found");
+  }
+
+  // Find the most recent medical record for this patient and doctor
+  // This is more reliable than matching by date since records are created when appointments are completed
+  const record = await prisma.medicalRecord.findFirst({
+    where: {
+      patientId: appointment.patientId,
+      doctorId: appointment.doctorId,
+    },
+    include: {
+      patient: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+            },
+          },
+        },
+      },
+      doctor: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  if (!record) {
+    throw new Error("No medical record found for this appointment");
+  }
+
+  return record;
+};
+
+/**
+ * Get single medical record by ID with access control
+ */
+export const getMedicalRecord = async (id, userId, userRole) => {
+  const record = await prisma.medicalRecord.findUnique({
+    where: { id },
+    include: {
+      patient: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+            },
+          },
+        },
+      },
+      doctor: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+  });
+
+  if (!record) {
+    throw new Error("Medical record not found");
+  }
+
+  // Access control: patients can only see their own records
+  if (userRole === "PATIENT") {
+    if (record.patient.userId !== userId) {
+      throw new Error(
+        "Access denied: You can only view your own medical records",
+      );
+    }
+  }
+  // Doctors can see records they created
+  else if (userRole === "DOCTOR") {
+    if (record.doctorId !== userId) {
+      throw new Error("Access denied: You can only view records you created");
+    }
+  }
+  // Admin can see all records (no additional check needed)
+
+  return record;
 };
 
 /**

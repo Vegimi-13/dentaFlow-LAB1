@@ -40,6 +40,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/patient/records/:id"
+          element={
+            <ProtectedRoute role="PATIENT">
+              <AppointmentDetails mode="view" />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/doctor"

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -35,6 +36,7 @@ const statusPriority = {
 
 export default function PatientDashboard() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   // data
   const [appointments, setAppointments] = useState([]);
@@ -312,34 +314,49 @@ export default function PatientDashboard() {
                       .map((r) => (
                         <Card key={r.id}>
                           <CardContent className="pt-4 space-y-2">
-                            <div className="flex justify-between">
-                              <h3 className="font-semibold text-sm">
-                                {r.title || "Medical record"}
-                              </h3>
-                              <span className="text-xs text-slate-500">
-                                {new Date(r.createdAt).toLocaleDateString()}
-                              </span>
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex justify-between items-center mb-2">
+                                  <h3 className="font-semibold text-sm">
+                                    {r.title || "Medical record"}
+                                  </h3>
+                                  <span className="text-xs text-slate-500">
+                                    {new Date(r.createdAt).toLocaleDateString()}
+                                  </span>
+                                </div>
+
+                                {r.diagnosis && (
+                                  <p className="text-sm">
+                                    <strong>Diagnosis:</strong> {r.diagnosis}
+                                  </p>
+                                )}
+                                {r.treatment && (
+                                  <p className="text-sm">
+                                    <strong>Treatment:</strong> {r.treatment}
+                                  </p>
+                                )}
+                                {r.notes && (
+                                  <p className="text-sm">
+                                    <strong>Notes:</strong> {r.notes}
+                                  </p>
+                                )}
+
+                                <p className="text-xs text-slate-500 mt-2">
+                                  Doctor: {r.doctor?.email ?? "—"}
+                                </p>
+                              </div>
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  navigate(`/patient/records/${r.id}`)
+                                }
+                                className="ml-3 shrink-0"
+                              >
+                                View
+                              </Button>
                             </div>
-
-                            {r.diagnosis && (
-                              <p>
-                                <strong>Diagnosis:</strong> {r.diagnosis}
-                              </p>
-                            )}
-                            {r.treatment && (
-                              <p>
-                                <strong>Treatment:</strong> {r.treatment}
-                              </p>
-                            )}
-                            {r.notes && (
-                              <p>
-                                <strong>Notes:</strong> {r.notes}
-                              </p>
-                            )}
-
-                            <p className="text-xs text-slate-500">
-                              Doctor: {r.doctor?.email ?? "—"}
-                            </p>
                           </CardContent>
                         </Card>
                       ))}
