@@ -41,6 +41,11 @@ router.get(
   allow("PATIENT"),
   appointmentController.getMyPatientAppointments,
 );
+router.get(
+  "/by-user/:userId",
+  allow("ADMIN"),
+  appointmentController.getAppointmentsByUserId
+);
 
 // DOCTOR / ADMIN → get appointment by ID
 router.get(

@@ -166,3 +166,41 @@ export const deleteAppointment = async (id) => {
     where: { id },
   });
 };
+
+
+// ADMIN → get appointments by userId
+export const getAppointmentsByUserId = async (userId) => {
+  // find patient from user
+  const patient = await prisma.patient.findUnique({
+    where: { userId },
+  });
+
+  if (!patient) return [];
+
+  return prisma.appointment.findMany({
+    where: { patientId: patient.id },
+    orderBy: { date: "asc" },
+    include: {
+      doctor: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+      patient: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      },
+    },
+  });
+};

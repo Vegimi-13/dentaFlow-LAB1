@@ -113,7 +113,27 @@ export default function CreateEditUserModal({
           {/* Phone */}
           <div>
             <Label>Phone</Label>
-            <Input {...register("phone")} placeholder="Enter phone number" />
+            <Input
+              type="tel"
+              {...register("phone", {
+                pattern: {
+                  value: /^[0-9+\-\s()]*$/,
+                  message:
+                    "Phone number can only contain numbers, +, -, spaces, and parentheses",
+                },
+              })}
+              placeholder="Enter phone number"
+              onKeyPress={(e) => {
+                // Allow numbers, +, -, space, and parentheses
+                const allowedChars = /[0-9+\-\s()]/;
+                if (
+                  !allowedChars.test(e.key) &&
+                  !["Backspace", "Delete", "Tab", "Enter"].includes(e.key)
+                ) {
+                  e.preventDefault();
+                }
+              }}
+            />
           </div>
 
           {/* Password (only when creating) */}

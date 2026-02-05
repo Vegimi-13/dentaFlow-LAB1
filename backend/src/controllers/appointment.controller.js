@@ -10,6 +10,19 @@ export const getAvailableDoctors = async (req, res) => {
   }
 };
 
+export const getAppointmentsByUserId = async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+
+    const appointments =
+      await appointmentService.getAppointmentsByUserId(userId);
+
+    res.json(appointments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 //  PATIENT → book appointment
 
 export const createAppointment = async (req, res) => {

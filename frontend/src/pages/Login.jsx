@@ -18,6 +18,7 @@ export default function Login() {
   const onSubmit = async (data) => {
     try {
       const res = await loginUser(data);
+      // Only pass access token (refresh token is now in httpOnly cookie)
       login(res.data.accessToken);
 
       const role = jwtDecode(res.data.accessToken).role;

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "../contexts/AuthContext";
-import { getAllUsers, deleteUser } from "../api/admin";
+import { getAllUsers, deleteUser, createUser, updateUser } from "../api/admin";
 import CreateEditUserModal from "../components/CreateEditUserModal";
 import ResetPasswordModal from "../components/ResetPasswordModal";
 export default function AdminDashboard() {
@@ -51,6 +51,16 @@ export default function AdminDashboard() {
     if (!confirm("Are you sure you want to delete this user?")) return;
     await deleteUser(id);
     loadUsers();
+  };
+
+  const handleSubmitUser = async (data) => {
+    if (selectedUser) {
+      // Edit mode
+      await updateUser(selectedUser.id, data);
+    } else {
+      // Create mode
+      await createUser(data);
+    }
   };
 
   return (
@@ -194,6 +204,7 @@ export default function AdminDashboard() {
             setSelectedUser(null);
             loadUsers();
           }}
+          onSubmitAction={handleSubmitUser}
         />
       )}
       {/* Reset User Modal */}
