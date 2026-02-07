@@ -165,7 +165,12 @@ export default function PatientDashboard() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-semibold">
-              Hello{user?.email ? `, ${user.email}` : ""}
+              Hello
+              {isProfileComplete && profile
+                ? `, ${profile.user.firstName} ${profile.user.lastName}`
+                : user?.email
+                  ? `, ${user.email}`
+                  : ""}
             </h1>
             <p className="text-sm text-slate-500">Patient dashboard</p>
             <p className="text-sm text-slate-500">
@@ -283,7 +288,10 @@ export default function PatientDashboard() {
                           })}
                         </p>
                         <p className="text-sm text-slate-500">
-                          Doctor: {appt.doctor?.email ?? "—"}
+                          Doctor:{" "}
+                          {appt.doctor?.firstName && appt.doctor?.lastName
+                            ? `Dr. ${appt.doctor.firstName} ${appt.doctor.lastName}`
+                            : (appt.doctor?.email ?? "—")}
                         </p>
                       </div>
 

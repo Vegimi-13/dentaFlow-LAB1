@@ -17,3 +17,15 @@ export const getMyDoctorAppointments = () => {
 export const updateAppointmentStatus = (id, status) => {
   return api.put(`/appointments/${id}`, { status });
 };
+
+export const getUserAppointments = (userId) => {
+  return api.get(`/appointments/by-user/${userId}`);
+};
+
+export const updateAppointment = (id, data) => {
+  return api.put(`/appointments/${id}`, data);
+};
+
+export const deleteAppointment = (id) => {
+  return api.delete(`/appointments/${id}`);
+};

@@ -60,7 +60,12 @@ export const createAppointment = async (userId, data) => {
     },
     include: {
       doctor: {
-        select: { id: true, email: true },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
       },
     },
   });
@@ -80,7 +85,12 @@ export const getAppointmentsByUser = async (userId) => {
     orderBy: { date: "asc" },
     include: {
       doctor: {
-        select: { id: true, email: true },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
       },
     },
   });
@@ -166,7 +176,6 @@ export const deleteAppointment = async (id) => {
     where: { id },
   });
 };
-
 
 // ADMIN → get appointments by userId
 export const getAppointmentsByUserId = async (userId) => {

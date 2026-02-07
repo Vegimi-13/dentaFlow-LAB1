@@ -87,7 +87,12 @@ export const getAllMedicalRecords = async () => {
     include: {
       patient: true,
       doctor: {
-        select: { id: true, email: true },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
       },
     },
   });
@@ -102,7 +107,12 @@ export const getRecordsByPatient = async (patientId) => {
     orderBy: { createdAt: "desc" },
     include: {
       doctor: {
-        select: { id: true, email: true },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
       },
     },
   });
@@ -130,7 +140,12 @@ export const getRecordsForPatientUser = async (patientId) => {
     orderBy: { createdAt: "desc" },
     include: {
       doctor: {
-        select: { id: true, email: true },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
       },
     },
   });

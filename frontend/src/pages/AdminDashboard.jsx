@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { getAllUsers, deleteUser, createUser, updateUser } from "../api/admin";
 import CreateEditUserModal from "../components/CreateEditUserModal";
 import ResetPasswordModal from "../components/ResetPasswordModal";
+import UserAppointmentsModal from "../components/UserAppointmentsModal";
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
 
@@ -14,6 +15,7 @@ export default function AdminDashboard() {
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [openModal, setOpenModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [appointmentsUser, setAppointmentsUser] = useState(null);
 
   /* =====================
      Load users
@@ -158,6 +160,21 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="flex gap-2">
+                  {u.role.name === "PATIENT" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      style={{
+                        backgroundColor: "black",
+                        color: "white",
+                        borderColor: "black",
+                      }}
+                      onClick={() => setAppointmentsUser(u)}
+                    >
+                      Appointments
+                    </Button>
+                  )}
+
                   <Button
                     size="sm"
                     variant="outline"
@@ -214,6 +231,15 @@ export default function AdminDashboard() {
           user={resetUser}
           onClose={() => setResetUser(null)}
           onSuccess={() => setResetUser(null)}
+        />
+      )}
+
+      {/* User Appointments Modal */}
+      {appointmentsUser && (
+        <UserAppointmentsModal
+          open={!!appointmentsUser}
+          user={appointmentsUser}
+          onClose={() => setAppointmentsUser(null)}
         />
       )}
     </div>

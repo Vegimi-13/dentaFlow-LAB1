@@ -149,10 +149,9 @@ export default function BookAppointmentModal({ open, onClose, onSuccess }) {
               <SelectContent>
                 {doctors.map((doctor) => (
                   <SelectItem key={doctor.id} value={doctor.id.toString()}>
-                    {doctor.email}{" "}
                     {doctor.firstName && doctor.lastName
-                      ? `- ${doctor.firstName} ${doctor.lastName}`
-                      : ""}
+                      ? `Dr. ${doctor.firstName} ${doctor.lastName}`
+                      : doctor.email}
                   </SelectItem>
                 ))}
               </SelectContent>

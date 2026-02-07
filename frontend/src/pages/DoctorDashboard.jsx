@@ -8,6 +8,8 @@ import {
   getMyDoctorAppointments,
   updateAppointmentStatus,
 } from "../api/appointment";
+import DoctorProfileModal from "../components/DoctorProfileModal";
+import { getMyProfile } from "../api/auth";
 
 export default function DoctorDashboard() {
   const { user, logout } = useAuth();
@@ -15,6 +17,8 @@ export default function DoctorDashboard() {
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   // pagination
   const [page, setPage] = useState(1);
@@ -23,6 +27,19 @@ export default function DoctorDashboard() {
   // NEW
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+
+  const loadProfile = async () => {
+    try {
+      const res = await getMyProfile();
+      setProfile(res.data);
+    } catch (error) {
+      console.error("Failed to load profile:", error);
+      setProfile(null);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   const loadAppointments = async () => {
     try {
@@ -36,8 +53,24 @@ export default function DoctorDashboard() {
   };
 
   useEffect(() => {
+    loadProfile();
     loadAppointments();
   }, []);
+
+  /* =====================
+     Profile completion check
+  ===================== */
+
+  const isProfileComplete =
+    profile &&
+    Boolean(profile.firstName) &&
+    Boolean(profile.lastName) &&
+    Boolean(profile.phone);
+
+  const handleProfileSuccess = async () => {
+    await loadProfile();
+    setProfileModalOpen(false);
+  };
 
   /* =====================
      Derived stats
@@ -110,7 +143,12 @@ export default function DoctorDashboard() {
             <h1 className="text-2xl font-semibold text-slate-800">
               Doctor dashboard
             </h1>
-            <p className="text-slate-500 text-sm">Logged in as {user?.email}</p>
+            <p className="text-slate-500 text-sm">
+              Logged in as{" "}
+              {isProfileComplete && profile
+                ? `Dr. ${profile.firstName} ${profile.lastName}`
+                : user?.email}
+            </p>
           </div>
 
           <Button variant="outline" onClick={logout}>
@@ -118,162 +156,217 @@ export default function DoctorDashboard() {
           </Button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard title="Patients" value={patientsCount} />
+        {/* Profile Loading */}
+        {profileLoading && (
+          <div className="flex justify-center items-center py-12">
+            <p className="text-slate-500">Loading profile...</p>
+          </div>
+        )}
 
-          <StatCard
-            title="Next appointment"
-            value={
-              nextAppointment
-                ? new Date(nextAppointment.date).toLocaleDateString()
-                : "No upcoming"
-            }
-            sub={
-              nextAppointment
-                ? `${nextAppointment.patient.user.firstName} ${nextAppointment.patient.user.lastName}`
-                : null
-            }
-          />
+        {/* Profile Incomplete - Force Profile Completion */}
+        {!profileLoading && !isProfileComplete && (
+          <div className="max-w-md mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle>Complete Your Profile</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-slate-600">
+                  Please complete your profile to access the dashboard. We need
+                  your name and phone number to display in the system.
+                </p>
+                <Button
+                  onClick={() => setProfileModalOpen(true)}
+                  className="w-full"
+                >
+                  Complete Profile
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-          <StatCard title="Today" value={todayCount} />
-        </div>
-
-        {/* Appointments */}
-        <Card>
-          <CardHeader>
-            <CardTitle>My appointments</CardTitle>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            {/* FILTERS */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Input
-                placeholder="Search patient..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-              />
-
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(1);
-                }}
-                className="border rounded px-3 py-2 text-sm"
+        {/* Full Dashboard - Profile Complete */}
+        {!profileLoading && isProfileComplete && (
+          <>
+            {/* Doctor Profile Button */}
+            <div className="flex justify-start">
+              <Button
+                onClick={() => setProfileModalOpen(true)}
+                className="flex items-center gap-2"
               >
-                <option value="ALL">All statuses</option>
-                <option value="PENDING">Pending</option>
-                <option value="CONFIRMED">Confirmed</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
+                Update Profile
+              </Button>
             </div>
 
-            {loading && <p className="text-slate-500">Loading…</p>}
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <StatCard title="Patients" value={patientsCount} />
 
-            {!loading && filteredAppointments.length === 0 && (
-              <p className="text-slate-500">No appointments found.</p>
-            )}
+              <StatCard
+                title="Next appointment"
+                value={
+                  nextAppointment
+                    ? new Date(nextAppointment.date).toLocaleDateString()
+                    : "No upcoming"
+                }
+                sub={
+                  nextAppointment
+                    ? `${nextAppointment.patient.user.firstName} ${nextAppointment.patient.user.lastName}`
+                    : null
+                }
+              />
 
-            {paginatedAppointments.map((appt) => (
-              <div
-                key={appt.id}
-                className="border rounded-md p-4 flex justify-between items-center"
-              >
-                <div>
-                  <p className="font-medium">
-                    {new Date(appt.date).toLocaleDateString()} •{" "}
-                    {new Date(appt.date).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
+              <StatCard title="Today" value={todayCount} />
+            </div>
 
-                  <p className="text-sm text-slate-500">
-                    Patient: {appt.patient.user.firstName}{" "}
-                    {appt.patient.user.lastName}
-                  </p>
+            {/* Appointments */}
+            <Card>
+              <CardHeader>
+                <CardTitle>My appointments</CardTitle>
+              </CardHeader>
 
-                  <StatusBadge status={appt.status} />
+              <CardContent className="space-y-4">
+                {/* FILTERS */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Input
+                    placeholder="Search patient..."
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                  />
+
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="border rounded px-3 py-2 text-sm"
+                  >
+                    <option value="ALL">All statuses</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="CONFIRMED">Confirmed</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
                 </div>
 
-                <div className="flex gap-2">
-                  {appt.status === "PENDING" && (
-                    <>
-                      <Button
-                        size="sm"
-                        onClick={() => confirmAppointment(appt.id)}
-                      >
-                        Confirm
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => cancelAppointment(appt.id)}
-                      >
-                        Cancel
-                      </Button>
-                    </>
-                  )}
+                {loading && <p className="text-slate-500">Loading…</p>}
 
-                  {appt.status === "CONFIRMED" && (
+                {!loading && filteredAppointments.length === 0 && (
+                  <p className="text-slate-500">No appointments found.</p>
+                )}
+
+                {paginatedAppointments.map((appt) => (
+                  <div
+                    key={appt.id}
+                    className="border rounded-md p-4 flex justify-between items-center"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {new Date(appt.date).toLocaleDateString()} •{" "}
+                        {new Date(appt.date).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+
+                      <p className="text-sm text-slate-500">
+                        Patient: {appt.patient.user.firstName}{" "}
+                        {appt.patient.user.lastName}
+                      </p>
+
+                      <StatusBadge status={appt.status} />
+                    </div>
+
+                    <div className="flex gap-2">
+                      {appt.status === "PENDING" && (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => confirmAppointment(appt.id)}
+                          >
+                            Confirm
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => cancelAppointment(appt.id)}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      )}
+
+                      {appt.status === "CONFIRMED" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            navigate(`/doctor/appointments/${appt.id}`)
+                          }
+                        >
+                          Open
+                        </Button>
+                      )}
+
+                      {appt.status === "COMPLETED" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            navigate(
+                              `/doctor/appointments/${appt.id}?view=true`,
+                            )
+                          }
+                        >
+                          View record
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Pagination */}
+                {filteredAppointments.length > pageSize && (
+                  <div className="flex justify-between pt-4">
                     <Button
-                      size="sm"
                       variant="outline"
-                      onClick={() =>
-                        navigate(`/doctor/appointments/${appt.id}`)
-                      }
+                      size="sm"
+                      disabled={page === 1}
+                      onClick={() => setPage((p) => p - 1)}
                     >
-                      Open
+                      Previous
                     </Button>
-                  )}
 
-                  {appt.status === "COMPLETED" && (
+                    <span className="text-sm text-slate-500">Page {page}</span>
+
                     <Button
-                      size="sm"
                       variant="outline"
-                      onClick={() =>
-                        navigate(`/doctor/appointments/${appt.id}?view=true`)
-                      }
+                      size="sm"
+                      disabled={page * pageSize >= filteredAppointments.length}
+                      onClick={() => setPage((p) => p + 1)}
                     >
-                      View record
+                      Next
                     </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {/* Pagination */}
-            {filteredAppointments.length > pageSize && (
-              <div className="flex justify-between pt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  Previous
-                </Button>
-
-                <span className="text-sm text-slate-500">Page {page}</span>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page * pageSize >= filteredAppointments.length}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
+
+      {/* Doctor Profile Modal */}
+      <DoctorProfileModal
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        user={user}
+        onSuccess={handleProfileSuccess}
+      />
     </div>
   );
 }
