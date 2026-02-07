@@ -43,6 +43,13 @@ export const createMedicalRecordFromAppointment = async (
     throw new Error("You can only create records for your own appointments");
   }
 
+  // Security: Prevent editing completed appointments
+  if (appointment.status === "COMPLETED") {
+    throw new Error(
+      "Cannot create or modify medical record for completed appointment",
+    );
+  }
+
   // Create medical record and mark appointment as completed in a transaction
   return prisma.$transaction(async (prisma) => {
     // Filter data to only include valid MedicalRecord fields

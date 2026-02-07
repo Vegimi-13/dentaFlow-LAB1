@@ -163,6 +163,20 @@ export const getAllAppointments = async () => {
 // DOCTOR / ADMIN → update appointment
 
 export const updateAppointment = async (id, data) => {
+  // Security: Get current appointment to check status
+  const existingAppointment = await prisma.appointment.findUnique({
+    where: { id },
+  });
+
+  if (!existingAppointment) {
+    throw new Error("Appointment not found");
+  }
+
+  // Security: Prevent updating completed appointments (except for status changes by admins)
+  if (existingAppointment.status === "COMPLETED" && !data.status) {
+    throw new Error("Cannot modify completed appointment");
+  }
+
   return prisma.appointment.update({
     where: { id },
     data,

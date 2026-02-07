@@ -27,6 +27,7 @@ export default function DoctorDashboard() {
   // NEW
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [todayFilter, setTodayFilter] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const loadProfile = async () => {
@@ -98,6 +99,15 @@ export default function DoctorDashboard() {
           return false;
         }
 
+        // today filter
+        if (todayFilter) {
+          const today = new Date().toDateString();
+          const apptDate = new Date(appt.date).toDateString();
+          if (today !== apptDate) {
+            return false;
+          }
+        }
+
         // search filter
         if (search.trim() !== "") {
           const fullName =
@@ -109,7 +119,7 @@ export default function DoctorDashboard() {
         return true;
       })
       .sort((a, b) => new Date(a.date) - new Date(b.date));
-  }, [appointments, statusFilter, search]);
+  }, [appointments, statusFilter, search, todayFilter]);
 
   const paginatedAppointments = filteredAppointments.slice(
     (page - 1) * pageSize,
@@ -237,6 +247,16 @@ export default function DoctorDashboard() {
                       setPage(1);
                     }}
                   />
+
+                  <Button
+                    onClick={() => {
+                      setTodayFilter(!todayFilter);
+                      setPage(1);
+                    }}
+                    className="bg-black text-white hover:bg-gray-800"
+                  >
+                    Today
+                  </Button>
 
                   <select
                     value={statusFilter}

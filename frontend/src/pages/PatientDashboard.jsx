@@ -15,6 +15,7 @@ import CompleteProfileForm from "../components/CompleteProfileForm";
 ===================== */
 
 const ITEMS_PER_PAGE = 5;
+const RECORDS_PER_PAGE = 4;
 
 const statusStyles = {
   PENDING: "border border-yellow-400 text-yellow-700 bg-yellow-50",
@@ -54,6 +55,12 @@ export default function PatientDashboard() {
   const [page, setPage] = useState(1);
   const [timeFilter, setTimeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+
+  // medical records filters
+  const [recordsPage, setRecordsPage] = useState(1);
+  const [recordsTimeFilter, setRecordsTimeFilter] = useState("ALL");
+  const [recordsSearchFilter, setRecordsSearchFilter] = useState("");
+  const [recordsDoctorFilter, setRecordsDoctorFilter] = useState("ALL");
 
   /* =====================
      Fetch helpers
@@ -153,6 +160,75 @@ export default function PatientDashboard() {
     (page - 1) * ITEMS_PER_PAGE,
     page * ITEMS_PER_PAGE,
   );
+
+  /* =====================
+     Medical Records Filtering
+  ===================== */
+
+  const applyRecordsTimeFilter = (list) => {
+    if (recordsTimeFilter === "ALL") return list;
+
+    const now = new Date();
+    const cutoff = new Date();
+
+    if (recordsTimeFilter === "24H") cutoff.setHours(now.getHours() - 24);
+    if (recordsTimeFilter === "7D") cutoff.setDate(now.getDate() - 7);
+    if (recordsTimeFilter === "30D") cutoff.setDate(now.getDate() - 30);
+    if (recordsTimeFilter === "3M") cutoff.setMonth(now.getMonth() - 3);
+    if (recordsTimeFilter === "6M") cutoff.setMonth(now.getMonth() - 6);
+
+    return list.filter((r) => new Date(r.createdAt) >= cutoff);
+  };
+
+  const applyRecordsSearchFilter = (list) => {
+    if (!recordsSearchFilter.trim()) return list;
+
+    const searchTerm = recordsSearchFilter.toLowerCase();
+    return list.filter(
+      (r) =>
+        (r.title && r.title.toLowerCase().includes(searchTerm)) ||
+        (r.diagnosis && r.diagnosis.toLowerCase().includes(searchTerm)) ||
+        (r.treatment && r.treatment.toLowerCase().includes(searchTerm)) ||
+        (r.notes && r.notes.toLowerCase().includes(searchTerm)),
+    );
+  };
+
+  const applyRecordsDoctorFilter = (list) => {
+    if (recordsDoctorFilter === "ALL") return list;
+    return list.filter((r) => {
+      const doctorName =
+        r.doctor?.firstName && r.doctor?.lastName
+          ? `Dr. ${r.doctor.firstName} ${r.doctor.lastName}`
+          : r.doctor?.email;
+      return doctorName === recordsDoctorFilter;
+    });
+  };
+
+  const filteredRecords = applyRecordsTimeFilter(
+    applyRecordsSearchFilter(applyRecordsDoctorFilter(records)),
+  ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const totalRecordsPages = Math.ceil(
+    filteredRecords.length / RECORDS_PER_PAGE,
+  );
+
+  const paginatedRecords = filteredRecords.slice(
+    (recordsPage - 1) * RECORDS_PER_PAGE,
+    recordsPage * RECORDS_PER_PAGE,
+  );
+
+  // Get unique doctors for filter dropdown
+  const uniqueDoctors = [
+    ...new Set(
+      records
+        .map((r) =>
+          r.doctor?.firstName && r.doctor?.lastName
+            ? `Dr. ${r.doctor.firstName} ${r.doctor.lastName}`
+            : r.doctor?.email,
+        )
+        .filter(Boolean),
+    ),
+  ];
 
   /* =====================
      Render
@@ -314,61 +390,180 @@ export default function PatientDashboard() {
                 ) : records.length === 0 ? (
                   <p className="text-slate-500">No medical records found.</p>
                 ) : (
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {[...records]
-                      .sort(
-                        (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-                      )
-                      .map((r) => (
-                        <Card key={r.id}>
-                          <CardContent className="pt-4 space-y-2">
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <div className="flex justify-between items-center mb-2">
-                                  <h3 className="font-semibold text-sm">
-                                    {r.title || "Medical record"}
-                                  </h3>
-                                  <span className="text-xs text-slate-500">
-                                    {new Date(r.createdAt).toLocaleDateString()}
-                                  </span>
+                  <>
+                    {/* Filters */}
+                    <div className="space-y-3 mb-6">
+                      <div className="flex flex-wrap gap-3 items-center">
+                        <div className="flex gap-2">
+                          <select
+                            value={recordsTimeFilter}
+                            onChange={(e) => {
+                              setRecordsTimeFilter(e.target.value);
+                              setRecordsPage(1);
+                            }}
+                            className="border rounded px-2 py-1 text-sm"
+                          >
+                            <option value="ALL">All time</option>
+                            <option value="24H">Last 24h</option>
+                            <option value="7D">Last 7 days</option>
+                            <option value="30D">Last 30 days</option>
+                            <option value="3M">Last 3 months</option>
+                            <option value="6M">Last 6 months</option>
+                          </select>
+
+                          <select
+                            value={recordsDoctorFilter}
+                            onChange={(e) => {
+                              setRecordsDoctorFilter(e.target.value);
+                              setRecordsPage(1);
+                            }}
+                            className="border rounded px-2 py-1 text-sm"
+                          >
+                            <option value="ALL">All doctors</option>
+                            {uniqueDoctors.map((doctor) => (
+                              <option key={doctor} value={doctor}>
+                                {doctor}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <input
+                          type="text"
+                          placeholder="Search diagnosis, treatment, notes..."
+                          value={recordsSearchFilter}
+                          onChange={(e) => {
+                            setRecordsSearchFilter(e.target.value);
+                            setRecordsPage(1);
+                          }}
+                          className="border rounded px-3 py-1 text-sm flex-1 min-w-0"
+                        />
+
+                        {(recordsTimeFilter !== "ALL" ||
+                          recordsDoctorFilter !== "ALL" ||
+                          recordsSearchFilter) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setRecordsTimeFilter("ALL");
+                              setRecordsDoctorFilter("ALL");
+                              setRecordsSearchFilter("");
+                              setRecordsPage(1);
+                            }}
+                            className="whitespace-nowrap"
+                          >
+                            Clear Filters
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Results info */}
+                      <div className="text-sm text-slate-600">
+                        Showing {paginatedRecords.length} of{" "}
+                        {filteredRecords.length} records
+                        {filteredRecords.length !== records.length &&
+                          ` (filtered from ${records.length} total)`}
+                      </div>
+                    </div>
+
+                    {/* Records List */}
+                    {filteredRecords.length === 0 ? (
+                      <p className="text-slate-500">
+                        No medical records found with current filters.
+                      </p>
+                    ) : (
+                      <div className="space-y-4 min-h-[40rem]">
+                        {paginatedRecords.map((r) => (
+                          <Card key={r.id}>
+                            <CardContent className="pt-4 space-y-2">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <h3 className="font-semibold text-sm">
+                                      {r.title || "Medical record"}
+                                    </h3>
+                                    <span className="text-xs text-slate-500">
+                                      {new Date(
+                                        r.createdAt,
+                                      ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+
+                                  {r.diagnosis && (
+                                    <p className="text-sm">
+                                      <strong>Diagnosis:</strong> {r.diagnosis}
+                                    </p>
+                                  )}
+                                  {r.treatment && (
+                                    <p className="text-sm">
+                                      <strong>Treatment:</strong> {r.treatment}
+                                    </p>
+                                  )}
+                                  {r.notes && (
+                                    <p className="text-sm">
+                                      <strong>Notes:</strong> {r.notes}
+                                    </p>
+                                  )}
+
+                                  <p className="text-xs text-slate-500 mt-2">
+                                    Doctor:{" "}
+                                    {r.doctor?.firstName && r.doctor?.lastName
+                                      ? `Dr. ${r.doctor.firstName} ${r.doctor.lastName}`
+                                      : (r.doctor?.email ?? "—")}
+                                  </p>
                                 </div>
 
-                                {r.diagnosis && (
-                                  <p className="text-sm">
-                                    <strong>Diagnosis:</strong> {r.diagnosis}
-                                  </p>
-                                )}
-                                {r.treatment && (
-                                  <p className="text-sm">
-                                    <strong>Treatment:</strong> {r.treatment}
-                                  </p>
-                                )}
-                                {r.notes && (
-                                  <p className="text-sm">
-                                    <strong>Notes:</strong> {r.notes}
-                                  </p>
-                                )}
-
-                                <p className="text-xs text-slate-500 mt-2">
-                                  Doctor: {r.doctor?.email ?? "—"}
-                                </p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    navigate(`/patient/records/${r.id}`)
+                                  }
+                                  className="ml-3 shrink-0"
+                                >
+                                  View
+                                </Button>
                               </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
 
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  navigate(`/patient/records/${r.id}`)
-                                }
-                                className="ml-3 shrink-0"
-                              >
-                                View
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </div>
+                    {/* Pagination */}
+                    {totalRecordsPages > 1 && (
+                      <div className="flex justify-between items-center mt-4">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setRecordsPage((prev) => Math.max(1, prev - 1))
+                            }
+                            disabled={recordsPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setRecordsPage((prev) =>
+                                Math.min(totalRecordsPages, prev + 1),
+                              )
+                            }
+                            disabled={recordsPage === totalRecordsPages}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                        <p className="text-sm text-slate-500">
+                          Page {recordsPage} of {totalRecordsPages}
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </TabsContent>
 

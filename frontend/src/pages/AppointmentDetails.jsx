@@ -19,15 +19,14 @@ export default function AppointmentDetails({ mode = "edit" }) {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Check URL params for view mode (when doctor views completed appointments)
-  const urlParams = new URLSearchParams(window.location.search);
-  const isViewMode = mode === "view" || urlParams.get("view") === "true";
-  const isReadOnly = isViewMode;
-
   const [appointment, setAppointment] = useState(null);
   const [medicalRecord, setMedicalRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedTeeth, setSelectedTeeth] = useState([]);
+
+  // Security: Read-only state depends on appointment status, not URL params
+  const isReadOnly =
+    mode === "view" || (appointment && appointment.status === "COMPLETED");
 
   const {
     register,
@@ -82,8 +81,8 @@ export default function AppointmentDetails({ mode = "edit" }) {
           const appt = res.data;
           setAppointment(appt);
 
-          // If viewing a completed appointment, load the medical record
-          if (urlParams.get("view") === "true" && appt.status === "COMPLETED") {
+          // If appointment is completed, load the medical record for viewing
+          if (appt.status === "COMPLETED") {
             api
               .get(`/records/by-appointment/${id}`)
               .then((recordRes) => {
@@ -145,6 +144,12 @@ export default function AppointmentDetails({ mode = "edit" }) {
      Submit medical record (DOCTOR)
   ===================== */
   const onSubmit = async (data) => {
+    // Security: Prevent editing completed appointments
+    if (appointment.status === "COMPLETED") {
+      toast.error("Cannot edit medical record for completed appointment");
+      return;
+    }
+
     try {
       await api.post(`/records/from-appointment/${id}`, {
         ...data,
