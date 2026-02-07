@@ -118,7 +118,14 @@ export default function DoctorDashboard() {
 
         return true;
       })
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
+      .sort((a, b) => {
+        // Prioritize PENDING appointments first
+        if (a.status === "PENDING" && b.status !== "PENDING") return -1;
+        if (a.status !== "PENDING" && b.status === "PENDING") return 1;
+        
+        // Within same status, sort by date
+        return new Date(a.date) - new Date(b.date);
+      });
   }, [appointments, statusFilter, search, todayFilter]);
 
   const paginatedAppointments = filteredAppointments.slice(

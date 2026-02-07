@@ -8,22 +8,20 @@ datasource db {
 }
 
 model Role {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
+  id   Int    @id @default(autoincrement())
+  name String @unique
 
   users User[]
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  password     String
+  id       Int    @id @default(autoincrement())
+  email    String @unique
+  password String
 
-
-  firstName    String?
-  lastName     String?
-  phone        String?
-
+  firstName String?
+  lastName  String?
+  phone     String?
 
   roleId       Int
   role         Role     @relation(fields: [roleId], references: [id])
@@ -31,21 +29,19 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  patient Patient?  
+  patient Patient?
 
   medicalRecords MedicalRecord[]
-  appointments Appointment[]
+  appointments   Appointment[]
 }
 
 model Patient {
-  id        Int      @id @default(autoincrement())
-  
+  id Int @id @default(autoincrement())
+
   dateOfBirth DateTime?
-  
 
-  userId Int @unique
+  userId Int  @unique
   user   User @relation(fields: [userId], references: [id])
-
 
   medicalRecords MedicalRecord[]
   appointments   Appointment[]
@@ -53,32 +49,32 @@ model Patient {
 
 //here is medical records
 model MedicalRecord {
-  id          Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  title       String
-  notes       String?
-  diagnosis   String?
-  treatment   String?
-  teeth         Json? //json type storing tooth data
+  title        String
+  notes        String?
+  diagnosis    String?
+  treatment    String?
+  prescription String?
+  teeth        Json? //json type storing tooth data
 
-  patientId   Int
-  doctorId    Int
+  patientId Int
+  doctorId  Int
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   // relations
-  patient     Patient  @relation(fields: [patientId], references: [id])
-  doctor      User     @relation(fields: [doctorId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+  doctor  User    @relation(fields: [doctorId], references: [id])
 }
 
-
 model Appointment {
-  id        Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  date      DateTime
+  date   DateTime
   // status    String   @default("PENDING")
   status AppointmentStatus @default(PENDING)
-  notes     String?
+  notes  String?
 
   patientId Int
   doctorId  Int
@@ -87,8 +83,8 @@ model Appointment {
   updatedAt DateTime @updatedAt
 
   // relations
-  patient   Patient @relation(fields: [patientId], references: [id])
-  doctor    User    @relation(fields: [doctorId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+  doctor  User    @relation(fields: [doctorId], references: [id])
 }
 
 enum AppointmentStatus {

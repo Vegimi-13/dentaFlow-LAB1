@@ -20,7 +20,6 @@ export default function AppointmentDetails({ mode = "edit" }) {
   const navigate = useNavigate();
 
   const [appointment, setAppointment] = useState(null);
-  const [medicalRecord, setMedicalRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedTeeth, setSelectedTeeth] = useState([]);
 
@@ -47,7 +46,6 @@ export default function AppointmentDetails({ mode = "edit" }) {
         .get(`/records/${recordId}`)
         .then((res) => {
           const record = res.data;
-          setMedicalRecord(record);
 
           // Create a mock appointment object for rendering
           setAppointment({
@@ -87,7 +85,6 @@ export default function AppointmentDetails({ mode = "edit" }) {
               .get(`/records/by-appointment/${id}`)
               .then((recordRes) => {
                 const record = recordRes.data;
-                setMedicalRecord(record);
 
                 reset({
                   diagnosis: record.diagnosis || "",
@@ -112,33 +109,6 @@ export default function AppointmentDetails({ mode = "edit" }) {
         .finally(() => setLoading(false));
     }
   }, [id, mode, navigate, reset]);
-
-  /* =====================
-     Load medical record for existing appointment (DOCTOR VIEW MODE)
-  ===================== */
-  useEffect(() => {
-    if (mode !== "view") return;
-
-    // This effect is for doctors viewing appointments with existing records
-    // Patient view mode is handled above
-    api
-      .get(`/records/by-appointment/${id}`)
-      .then((res) => {
-        const record = res.data;
-
-        reset({
-          diagnosis: record.diagnosis || "",
-          treatment: record.treatment || "",
-          prescription: record.prescription || "",
-          notes: record.notes || "",
-        });
-
-        setSelectedTeeth(record.teeth || []);
-      })
-      .catch(() => {
-        // This is okay - appointment might not have a record yet
-      });
-  }, [mode, id, reset]);
 
   /* =====================
      Submit medical record (DOCTOR)

@@ -53,8 +53,8 @@ export const createMedicalRecordFromAppointment = async (
   // Create medical record and mark appointment as completed in a transaction
   return prisma.$transaction(async (prisma) => {
     // Filter data to only include valid MedicalRecord fields
-    const { diagnosis, treatment, notes, teeth } = data;
-    const filteredData = { diagnosis, treatment, notes, teeth };
+    const { diagnosis, treatment, prescription, notes, teeth } = data;
+    const filteredData = { diagnosis, treatment, prescription, notes, teeth };
 
     // Create the medical record
     const record = await prisma.medicalRecord.create({
