@@ -1,30 +1,34 @@
-import { useForm } from "react-hook-form"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useForm } from "react-hook-form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { registerUser } from "../api/auth"
-import { toast } from "react-toastify"
-import { Link } from "react-router-dom"
+} from "@/components/ui/select";
+import { registerUser } from "../api/auth";
+import { toast } from "react-toastify";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Register() {
-  const { register, handleSubmit, setValue } = useForm()
+  const { register, handleSubmit, setValue } = useForm();
+  const navigate = useNavigate();
 
   const onSubmit = async (data) => {
     try {
-      await registerUser(data)
-      toast.success("Account created. You can login now.")
+      await registerUser(data);
+      toast.success("Account created. Redirecting to login...");
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500); // Give time for the user to see the success message
     } catch (err) {
-      toast.error(err.response?.data?.error || "Register failed")
+      toast.error(err.response?.data?.error || "Register failed");
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -62,11 +66,13 @@ export default function Register() {
 
             <p className="text-sm text-center text-gray-500">
               Already have an account?{" "}
-              <Link to="/login" className="underline">Login</Link>
+              <Link to="/login" className="underline">
+                Login
+              </Link>
             </p>
           </form>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -56,7 +56,7 @@ api.interceptors.response.use(
         );
 
         const { accessToken: newAccessToken } = response.data;
-        console.log("✅ Token refreshed successfully!");
+        console.log("Token refreshed successfully!");
 
         // Update access token in memory
         setAccessToken(newAccessToken);
@@ -68,7 +68,7 @@ api.interceptors.response.use(
         // Retry the original request
         return api(originalRequest);
       } catch (refreshError) {
-        console.log("❌ Token refresh failed, redirecting to login");
+        console.log(" Token refresh failed, redirecting to login");
         // Refresh failed, clear token and redirect to login
         clearAccessToken();
         window.location.href = "/login";
