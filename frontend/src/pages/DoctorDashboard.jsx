@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import {
   getMyDoctorAppointments,
@@ -28,6 +29,9 @@ export default function DoctorDashboard() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [todayFilter, setTodayFilter] = useState(false);
+
+  // Loading states for individual appointments
+  const [actionLoading, setActionLoading] = useState(new Set());
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const loadProfile = async () => {
@@ -122,7 +126,7 @@ export default function DoctorDashboard() {
         // Prioritize PENDING appointments first
         if (a.status === "PENDING" && b.status !== "PENDING") return -1;
         if (a.status !== "PENDING" && b.status === "PENDING") return 1;
-        
+
         // Within same status, sort by date
         return new Date(a.date) - new Date(b.date);
       });
@@ -138,13 +142,31 @@ export default function DoctorDashboard() {
   ===================== */
 
   const confirmAppointment = async (id) => {
-    await updateAppointmentStatus(id, "CONFIRMED");
-    loadAppointments();
+    setActionLoading((prev) => new Set([...prev, `confirm-${id}`]));
+    try {
+      await updateAppointmentStatus(id, "CONFIRMED");
+      loadAppointments();
+    } finally {
+      setActionLoading((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(`confirm-${id}`);
+        return newSet;
+      });
+    }
   };
 
   const cancelAppointment = async (id) => {
-    await updateAppointmentStatus(id, "CANCELLED");
-    loadAppointments();
+    setActionLoading((prev) => new Set([...prev, `cancel-${id}`]));
+    try {
+      await updateAppointmentStatus(id, "CANCELLED");
+      loadAppointments();
+    } finally {
+      setActionLoading((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(`cancel-${id}`);
+        return newSet;
+      });
+    }
   };
 
   /* =====================
@@ -315,15 +337,25 @@ export default function DoctorDashboard() {
                           <Button
                             size="sm"
                             onClick={() => confirmAppointment(appt.id)}
+                            disabled={actionLoading.has(`confirm-${appt.id}`)}
                           >
-                            Confirm
+                            {actionLoading.has(`confirm-${appt.id}`) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              "Confirm"
+                            )}
                           </Button>
                           <Button
                             size="sm"
                             variant="destructive"
                             onClick={() => cancelAppointment(appt.id)}
+                            disabled={actionLoading.has(`cancel-${appt.id}`)}
                           >
-                            Cancel
+                            {actionLoading.has(`cancel-${appt.id}`) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              "Cancel"
+                            )}
                           </Button>
                         </>
                       )}

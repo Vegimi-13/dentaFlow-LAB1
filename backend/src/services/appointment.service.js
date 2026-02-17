@@ -1,4 +1,5 @@
 import prisma from "../prisma/client.js";
+import { sendAppointmentConfirmedEmail } from "../utils/mailer.js";
 
 // Get available doctors for appointment booking
 export const getAvailableDoctors = async () => {
@@ -176,11 +177,32 @@ export const updateAppointment = async (id, data) => {
   if (existingAppointment.status === "COMPLETED" && !data.status) {
     throw new Error("Cannot modify completed appointment");
   }
-
-  return prisma.appointment.update({
+  const updatedAppointment = await prisma.appointment.update({
     where: { id },
     data,
+    include: {
+      patient: {
+        include: {
+          user: true,
+        },
+      },
+      doctor: true,
+    },
   });
+
+  // 📧 Send email ONLY when status changes to CONFIRMED
+  if (
+    data.status === "CONFIRMED" &&
+    existingAppointment.status !== "CONFIRMED"
+  ) {
+    await sendAppointmentConfirmedEmail(
+      updatedAppointment.patient.user.email,
+      `${updatedAppointment.doctor.firstName} ${updatedAppointment.doctor.lastName}`,
+      updatedAppointment.date
+    );
+  }
+
+  return updatedAppointment;
 };
 
 // ADMIN → delete appointment
