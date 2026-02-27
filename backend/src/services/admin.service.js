@@ -83,7 +83,51 @@ export const updateUser = async (id, data) => {
 };
 
 export const deleteUser = async (id) => {
-  return prisma.user.delete({
+  // Check if user exists
+  const user = await prisma.user.findUnique({
     where: { id },
+    include: {
+      patient: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // Start a transaction to ensure all deletions happen atomically
+  return await prisma.$transaction(async (tx) => {
+    // If user has a patient record, delete all related data
+    if (user.patient) {
+      // Delete medical records where this patient is the patient
+      await tx.medicalRecord.deleteMany({
+        where: { patientId: user.patient.id },
+      });
+
+      // Delete appointments where this patient is the patient
+      await tx.appointment.deleteMany({
+        where: { patientId: user.patient.id },
+      });
+
+      // Delete the patient record
+      await tx.patient.delete({
+        where: { id: user.patient.id },
+      });
+    }
+
+    // Delete medical records where this user is the doctor
+    await tx.medicalRecord.deleteMany({
+      where: { doctorId: id },
+    });
+
+    // Delete appointments where this user is the doctor
+    await tx.appointment.deleteMany({
+      where: { doctorId: id },
+    });
+
+    // Finally, delete the user
+    return await tx.user.delete({
+      where: { id },
+    });
   });
 };

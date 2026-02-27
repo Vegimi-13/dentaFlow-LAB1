@@ -13,14 +13,40 @@ import {
 import { registerUser } from "../api/auth";
 import { toast } from "react-toastify";
 import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 export default function Register() {
-  const { register, handleSubmit, setValue } = useForm();
+  const { register, handleSubmit, setValue, watch } = useForm();
   const navigate = useNavigate();
+  const [passwordError, setPasswordError] = useState("");
+
+  const watchPassword = watch("password");
+  const watchConfirmPassword = watch("confirmPassword");
+
+  // Real-time password validation
+  useEffect(() => {
+    if (watchPassword && watchConfirmPassword) {
+      if (watchPassword !== watchConfirmPassword) {
+        setPasswordError("Passwords do not match");
+      } else {
+        setPasswordError("");
+      }
+    } else {
+      setPasswordError("");
+    }
+  }, [watchPassword, watchConfirmPassword]);
 
   const onSubmit = async (data) => {
+    // Final check if passwords match (in case user submits quickly)
+    if (data.password !== data.confirmPassword) {
+      setPasswordError("Passwords do not match");
+      return;
+    }
+
     try {
-      await registerUser(data);
+      // Remove confirmPassword from data before sending to API
+      const { confirmPassword, ...submitData } = data;
+      await registerUser(submitData);
       toast.success("Account created. Redirecting to login...");
       setTimeout(() => {
         navigate("/login");
@@ -47,6 +73,19 @@ export default function Register() {
             <div>
               <Label>Password</Label>
               <Input {...register("password")} type="password" required />
+            </div>
+
+            <div>
+              <Label>Confirm Password</Label>
+              <Input
+                {...register("confirmPassword")}
+                type="password"
+                required
+                className={passwordError ? "border-red-500" : ""}
+              />
+              {passwordError && (
+                <p className="text-sm text-red-500 mt-1">{passwordError}</p>
+              )}
             </div>
 
             <div>

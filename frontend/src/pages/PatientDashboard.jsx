@@ -586,7 +586,7 @@ export default function PatientDashboard() {
                       {profile.user?.lastName ?? "—"}
                     </p>
                     <p>
-                      <strong>Email:</strong> {user.email}
+                      <strong>Email:</strong> {profile.user.email}
                     </p>
                     <p>
                       <strong>Phone:</strong> {profile.user.phone || "—"}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "../contexts/AuthContext";
@@ -16,6 +16,8 @@ export default function AdminDashboard() {
   const [openModal, setOpenModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [appointmentsUser, setAppointmentsUser] = useState(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   /* =====================
      Load users
@@ -36,23 +38,68 @@ export default function AdminDashboard() {
   }, []);
 
   /* =====================
+     Search functionality
+  ===================== */
+  // Debounced search - only search after user stops typing for 500ms
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearchTerm(searchInput);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput]);
+
+  const handleSearchInputChange = (e) => {
+    setSearchInput(e.target.value);
+  };
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === "Enter") {
+      setSearchTerm(searchInput);
+    }
+  };
+
+  /* =====================
      Derived data
   ===================== */
   const totalDoctors = users.filter((u) => u.role.name === "DOCTOR").length;
   const totalPatients = users.filter((u) => u.role.name === "PATIENT").length;
 
-  const filteredUsers =
-    roleFilter === "ALL"
-      ? users
-      : users.filter((u) => u.role.name === roleFilter);
+  const filteredUsers = users.filter((u) => {
+    // Filter by role
+    const roleMatch = roleFilter === "ALL" || u.role.name === roleFilter;
+
+    // Filter by search term (search in name and email)
+    const searchMatch =
+      !searchTerm ||
+      (u.firstName &&
+        u.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (u.lastName &&
+        u.lastName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      u.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+    return roleMatch && searchMatch;
+  });
 
   /* =====================
      Actions
   ===================== */
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-    await deleteUser(id);
-    loadUsers();
+    if (
+      !confirm(
+        "Are you sure you want to delete this user? This will also delete all their appointments and medical records.",
+      )
+    )
+      return;
+
+    try {
+      await deleteUser(id);
+      loadUsers();
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.error || error.message || "Failed to delete user";
+      alert(`Error: ${errorMessage}`);
+    }
   };
 
   const handleSubmitUser = async (data) => {
@@ -74,7 +121,7 @@ export default function AdminDashboard() {
             <h1 className="text-2xl font-semibold text-slate-800">
               Admin dashboard
             </h1>
-            <p className="text-slate-500 text-sm">Logged in as {user?.email}</p>
+            <p className="text-slate-500 text-sm">Logged in as Admin</p>
           </div>
 
           <Button variant="outline" onClick={logout}>
@@ -113,6 +160,28 @@ export default function AdminDashboard() {
             <CardTitle>Users</CardTitle>
 
             <div className="flex items-center gap-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search users..."
+                  value={searchInput}
+                  onChange={handleSearchInputChange}
+                  onKeyPress={handleSearchKeyPress}
+                  className="border rounded-md px-3 py-2 text-sm w-48 pr-8"
+                />
+                {searchInput && (
+                  <button
+                    onClick={() => {
+                      setSearchInput("");
+                      setSearchTerm("");
+                    }}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
@@ -140,7 +209,13 @@ export default function AdminDashboard() {
 
             {!loading && filteredUsers.length === 0 && (
               <p className="text-slate-500">
-                No users found for selected role.
+                {searchTerm
+                  ? `No users found matching "${searchTerm}"${
+                      roleFilter !== "ALL"
+                        ? ` in ${roleFilter.toLowerCase()} role`
+                        : ""
+                    }.`
+                  : `No users found for selected role.`}
               </p>
             )}
 
